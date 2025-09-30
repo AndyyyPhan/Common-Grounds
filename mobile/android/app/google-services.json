@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "800333772675",
+    "project_id": "blue4-commongrounds",
+    "storage_bucket": "blue4-commongrounds.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:800333772675:android:3efb80e652628661e7a8b6",
+        "android_client_info": {
+          "package_name": "com.blue4.commongrounds"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBFc2qq7Uudo8w3UvGDgl9Stn8qaHAdOeA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

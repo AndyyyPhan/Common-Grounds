@@ -27,11 +27,14 @@ migrate_working_dir/
 **/doc/api/
 **/ios/Flutter/.last_build_id
 .dart_tool/
+.packages
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
 /build/
 /coverage/
+.melos_tool/
 
 # Symbolication related
 app.*.symbols
@@ -39,7 +42,52 @@ app.*.symbols
 # Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# Flutter iOS-generated & CocoaPods
+ios/Flutter/ephemeral/
+ios/.symlinks/
+ios/Pods/
+macos/Flutter/ephemeral/
+macos/Pods/
+
+# Flutter Android build outputs & intermediates
+android/.gradle/
+android/.cxx/
+android/local.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
+
+# Android signing / secrets
+android/key.properties
+android/app/upload-keystore.jks
+*.keystore
+*.jks
+
+# Firebase Admin creds (server only)
+**/serviceAccountKey.json
+
+# Local env & IDE
+*.env
+.env.*
+.vscode/*
+!.vscode/launch.json
+!.vscode/settings.json
+local.properties
+
+# Optional: if your org prefers not committing client configs
+# android/app/google-services.json
+# ios/Runner/GoogleService-Info.plist
+
+# Local env files
+*.env
+.env.*
+.envrc
+
+# Future: Node/Express server
+server/node_modules/
+server/.env
+server/.env.*
+server/dist/
+server/coverage/
+server/.nyc_output/
+server/pnpm-lock.yaml # or yarn.lock if you standardize on npm
