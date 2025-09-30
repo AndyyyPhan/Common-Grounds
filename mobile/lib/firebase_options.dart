@@ -17,29 +17,17 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         return android;
       case TargetPlatform.iOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for ios - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -59,4 +47,43 @@ class DefaultFirebaseOptions {
     projectId: 'blue4-commongrounds',
     storageBucket: 'blue4-commongrounds.firebasestorage.app',
   );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyD36MIS_ce4K_UXkZ1BKoG5tvctPLQmBlY',
+    appId: '1:800333772675:web:b40fdf7fd641d056e7a8b6',
+    messagingSenderId: '800333772675',
+    projectId: 'blue4-commongrounds',
+    authDomain: 'blue4-commongrounds.firebaseapp.com',
+    storageBucket: 'blue4-commongrounds.firebasestorage.app',
+    measurementId: 'G-VPDPK3N3YC',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyCKPOpL6xYmhxukPvuB8sJsqxuWuC61uQg',
+    appId: '1:800333772675:ios:8e4485ed15e40f2de7a8b6',
+    messagingSenderId: '800333772675',
+    projectId: 'blue4-commongrounds',
+    storageBucket: 'blue4-commongrounds.firebasestorage.app',
+    iosBundleId: 'com.example.mobile',
+  );
+
+  static const FirebaseOptions ios = FirebaseOptions(
+    apiKey: 'AIzaSyCKPOpL6xYmhxukPvuB8sJsqxuWuC61uQg',
+    appId: '1:800333772675:ios:8e4485ed15e40f2de7a8b6',
+    messagingSenderId: '800333772675',
+    projectId: 'blue4-commongrounds',
+    storageBucket: 'blue4-commongrounds.firebasestorage.app',
+    iosBundleId: 'com.example.mobile',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyD36MIS_ce4K_UXkZ1BKoG5tvctPLQmBlY',
+    appId: '1:800333772675:web:945b3af86d5cb67ee7a8b6',
+    messagingSenderId: '800333772675',
+    projectId: 'blue4-commongrounds',
+    authDomain: 'blue4-commongrounds.firebaseapp.com',
+    storageBucket: 'blue4-commongrounds.firebasestorage.app',
+    measurementId: 'G-DPDVVVGB5V',
+  );
+
 }

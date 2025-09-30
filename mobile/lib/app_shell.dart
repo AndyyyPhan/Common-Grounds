@@ -1,35 +1,54 @@
+// lib/app_shell.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'my_app_state.dart';
-import 'features/home/home_page.dart';
-import 'features/discover/discover_page.dart';
-import 'features/profile/profile_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'services/auth_service.dart';
+import 'pages/profile_page.dart';
 
-class AppShell extends StatefulWidget {
+class AppShell extends StatelessWidget {
   const AppShell({super.key});
-  @override
-  State<AppShell> createState() => _AppShellState();
-}
-
-class _AppShellState extends State<AppShell> {
-  int _index = 0;
 
   @override
   Widget build(BuildContext context) {
-    final pages = const [HomePage(), DiscoverPage(), ProfilePage()];
+    final u = FirebaseAuth.instance.currentUser;
+    final displayName = u?.displayName ?? 'Friend';
+    final email = u?.email ?? '';
+    final photo = u?.photoURL;
+
     return Scaffold(
-      body: pages[_index],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(
-            icon: Icon(Icons.travel_explore),
-            label: 'Discover',
+      appBar: AppBar(
+        title: const Text('Common Grounds'),
+        actions: [
+          IconButton(
+            tooltip: 'Sign out',
+            onPressed: () async {
+              await AuthService.instance.signOut();
+            },
+            icon: const Icon(Icons.logout),
           ),
-          NavigationDestination(icon: Icon(Icons.person), label: 'Profile'),
+          IconButton(
+            tooltip: 'My Profile',
+            icon: const Icon(Icons.account_circle),
+            onPressed: () {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const ProfilePage()));
+            },
+          ),
         ],
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (photo != null)
+              CircleAvatar(radius: 36, backgroundImage: NetworkImage(photo)),
+            const SizedBox(height: 12),
+            Text('Hi, $displayName', style: const TextStyle(fontSize: 20)),
+            if (email.isNotEmpty) Text(email),
+            const SizedBox(height: 24),
+            const Text('This is your main app shell.'),
+          ],
+        ),
       ),
     );
   }

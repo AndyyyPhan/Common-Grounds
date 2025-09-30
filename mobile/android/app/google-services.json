@@ -12,7 +12,20 @@
           "package_name": "com.blue4.commongrounds"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "800333772675-p45mtt710mspunp8n4haalh75ahc9req.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.blue4.commongrounds",
+            "certificate_hash": "d8156dd24ebae841975dcb4d683351cb04809b73"
+          }
+        },
+        {
+          "client_id": "800333772675-fpnvhp5evfrqifff778b5ssvinldunu7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBFc2qq7Uudo8w3UvGDgl9Stn8qaHAdOeA"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "800333772675-fpnvhp5evfrqifff778b5ssvinldunu7.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "800333772675-skk1odgbh1hlskfq23u9ilj12m2g7r8a.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.mobile"
+              }
+            }
+          ]
         }
       }
     }
