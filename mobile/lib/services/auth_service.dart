@@ -73,7 +73,7 @@ class AuthService {
     }
 
     // Get tokens, exchange for Firebase credential (idToken is sufficient).
-    final gAuth = await gUser.authentication;
+    final gAuth = gUser.authentication;
     final credential = GoogleAuthProvider.credential(idToken: gAuth.idToken);
     final cred = await _auth.signInWithCredential(credential);
 
