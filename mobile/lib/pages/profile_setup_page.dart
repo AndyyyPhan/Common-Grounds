@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_profile.dart';
 import '../services/profile_service.dart';
 
@@ -44,6 +45,10 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   @override
   void initState() {
     super.initState();
+    final fallbackName =
+        widget.profile.displayName ??
+        FirebaseAuth.instance.currentUser?.displayName ??
+        '';
     _name = TextEditingController(text: widget.profile.displayName ?? '');
     _bio = TextEditingController(text: widget.profile.bio ?? '');
     _major = TextEditingController(text: widget.profile.major ?? '');
@@ -66,11 +71,10 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       _error = null;
     });
     try {
+      final name = _name.text.trim();
       final p = UserProfile(
         uid: widget.profile.uid,
-        displayName: _name.text.trim().isEmpty
-            ? widget.profile.displayName
-            : _name.text.trim(),
+        displayName: name.isEmpty ? widget.profile.displayName : name,
         photoUrl: widget.profile.photoUrl,
         bio: _bio.text.trim().isEmpty ? null : _bio.text.trim(),
         classYear: _classYear.text.trim().isEmpty
@@ -82,6 +86,11 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         updatedAt: DateTime.now(),
       );
       await ProfileService.instance.upsertProfile(p);
+      if (name.isNotEmpty) {
+        final user = FirebaseAuth.instance.currentUser;
+        await user?.updateDisplayName(name);
+        await user?.reload();
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
