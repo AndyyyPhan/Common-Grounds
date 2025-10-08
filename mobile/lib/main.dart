@@ -9,6 +9,7 @@ import 'pages/sign_in_page.dart';
 import 'services/profile_service.dart';
 import 'models/user_profile.dart';
 import 'pages/profile_setup_page.dart';
+import 'services/messaging_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -83,21 +84,19 @@ class _BootstrapGateState extends State<BootstrapGate> {
 
         // Ensure there’s a profile doc, then watch it.
         return FutureBuilder<void>(
-          future: ProfileService.instance.ensureDoc(
-            user.uid,
-            displayName: user.displayName,
-            photoUrl: user.photoURL,
-          ),
-          builder: (context, ensureSnap) {
-            if (ensureSnap.connectionState != ConnectionState.done) {
+          future: MessagingService.instance.initForUser(user.uid),
+          builder: (context, fcmSnap) {
+            if (fcmSnap.connectionState != ConnectionState.done) {
               return const Scaffold(
                 body: Center(child: CircularProgressIndicator()),
               );
             }
-            if (ensureSnap.hasError) {
+            // If FCM init fails, don't block the app—just continue
+            // (you can show a snackbar/toast elsewhere if desired)
+            if (fcmSnap.hasError) {
               return Scaffold(
                 body: Center(
-                  child: Text('Profile init error: ${ensureSnap.error}'),
+                  child: Text('Profile init error: ${fcmSnap.error}'),
                 ),
               );
             }
