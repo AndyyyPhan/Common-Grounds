@@ -127,6 +127,17 @@ class HomePage extends StatelessWidget {
         title: const Text('Common Grounds'),
         actions: [
           IconButton(
+            tooltip: 'My Profile',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const ProfilePage(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.person),
+          ),
+          IconButton(
             tooltip: 'Sign out',
             onPressed: () async => AuthService.instance.signOut(),
             icon: const Icon(Icons.logout),
@@ -242,7 +253,7 @@ class HomePage extends StatelessWidget {
                         title: 'Find Matches',
                         subtitle: 'Discover nearby students',
                         onTap: () {
-                          // Navigate to matches page
+                          // Navigate to matches page - this will be handled by bottom navigation
                         },
                       ),
                     ),
@@ -254,6 +265,38 @@ class HomePage extends StatelessWidget {
                         subtitle: 'Chat with matches',
                         onTap: () {
                           // Navigate to messages page
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const SizedBox(height: 12),
+                
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ActionCard(
+                        icon: Icons.edit,
+                        title: 'Edit Profile',
+                        subtitle: 'Update your interests',
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => const ProfilePage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _ActionCard(
+                        icon: Icons.settings,
+                        title: 'Settings',
+                        subtitle: 'Privacy & preferences',
+                        onTap: () {
+                          // Navigate to settings page
                         },
                       ),
                     ),

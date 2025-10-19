@@ -103,7 +103,9 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   Widget build(BuildContext context) {
     final canSave = _interests.isNotEmpty; // your completion rule
     return Scaffold(
-      appBar: AppBar(title: const Text('Create your profile')),
+      appBar: AppBar(
+        title: Text(widget.profile.isComplete ? 'Edit Profile' : 'Create your profile'),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
@@ -177,7 +179,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                       width: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Save & Continue'),
+                  : Text(widget.profile.isComplete ? 'Save Changes' : 'Save & Continue'),
             ),
           ],
         ),
