@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Common Grounds needs your location to help you find nearby students with similar interests for meaningful connections.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Common Grounds needs your location to help you find nearby students with similar interests for meaningful connections.</string>
 </dict>
 </plist>
