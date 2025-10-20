@@ -235,6 +235,8 @@ class _LocationSettingsState extends State<_LocationSettings> {
                           ? null
                           : (value) async {
                               setState(() => _isToggling = true);
+                              // Capture ScaffoldMessenger before async gap
+                              final messenger = ScaffoldMessenger.of(context);
                               try {
                                 await LocationService.instance
                                     .setLocationVisibility(
@@ -242,7 +244,7 @@ class _LocationSettingsState extends State<_LocationSettings> {
                                   value,
                                 );
                                 if (mounted && value) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     const SnackBar(
                                       content: Text(
                                         'Location sharing enabled',
@@ -253,7 +255,7 @@ class _LocationSettingsState extends State<_LocationSettings> {
                                 }
                               } catch (e) {
                                 if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     SnackBar(
                                       content: Text('Error: $e'),
                                       backgroundColor: Colors.red,
@@ -291,10 +293,12 @@ class _LocationSettingsState extends State<_LocationSettings> {
                   const SizedBox(height: 8),
                   TextButton.icon(
                     onPressed: () async {
+                      // Capture ScaffoldMessenger before async gap
+                      final messenger = ScaffoldMessenger.of(context);
                       try {
                         await LocationService.instance.refreshLocation();
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          messenger.showSnackBar(
                             const SnackBar(
                               content: Text('Location refreshed'),
                               duration: Duration(seconds: 2),
@@ -303,7 +307,7 @@ class _LocationSettingsState extends State<_LocationSettings> {
                         }
                       } catch (e) {
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          messenger.showSnackBar(
                             SnackBar(
                               content: Text('Error refreshing: $e'),
                               backgroundColor: Colors.red,

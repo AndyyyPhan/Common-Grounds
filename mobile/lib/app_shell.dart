@@ -1,13 +1,13 @@
 // lib/app_shell.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'services/auth_service.dart';
 import 'services/profile_service.dart';
 import 'services/chat_service.dart';
 import 'models/user_profile.dart';
 import 'models/chat_models.dart';
 import 'pages/profile_page.dart';
 import 'pages/conversations_page.dart';
+import 'pages/home_page.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -31,17 +31,17 @@ class _AppShellState extends State<AppShell> {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        final profile = snap.data;
-        final displayName = profile?.displayName ?? u.displayName ?? 'Friend';
 
         final pages = [
-          _HomePage(displayName: displayName, photoUrl: u.photoURL),
+          HomePage(
+            // Pass callback to navigate between tabs
+            onNavigateToTab: (index) => setState(() => _currentIndex = index),
+          ),
           const ConversationsPage(),
           const ProfilePage(),
         ];
 
         return Scaffold(
-          appBar: _currentIndex == 0 ? _AppBar() : null,
           body: IndexedStack(
             index: _currentIndex,
             children: pages,
@@ -57,58 +57,7 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
-class _HomePage extends StatelessWidget {
-  final String displayName;
-  final String? photoUrl;
-
-  const _HomePage({
-    required this.displayName,
-    this.photoUrl,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (photoUrl != null)
-            CircleAvatar(
-              radius: 36,
-              backgroundImage: NetworkImage(photoUrl!),
-            ),
-          const SizedBox(height: 12),
-          Text('Hi, $displayName', style: const TextStyle(fontSize: 20)),
-          const SizedBox(height: 24),
-          const Text('Welcome to Common Grounds!'),
-          const SizedBox(height: 8),
-          const Text('Find nearby students and start connecting.'),
-        ],
-      ),
-    );
-  }
-}
-
-class _AppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _AppBar();
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
-
-  @override
-  Widget build(BuildContext context) {
-    return AppBar(
-      title: const Text('Common Grounds'),
-      actions: [
-        IconButton(
-          tooltip: 'Sign out',
-          onPressed: () async => AuthService.instance.signOut(),
-          icon: const Icon(Icons.logout),
-        ),
-      ],
-    );
-  }
-}
-
+/// Bottom navigation bar with unread message badge
 class _BottomNav extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
