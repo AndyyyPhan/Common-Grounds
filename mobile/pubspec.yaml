@@ -38,6 +38,7 @@ dependencies:
   firebase_messaging: ^16.0.2
   geolocator: ^14.0.2
   permission_handler: ^12.0.1
+  geoflutterfire_plus: ^0.0.4
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
