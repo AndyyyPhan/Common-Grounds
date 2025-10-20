@@ -8,6 +8,7 @@ class UserProfile {
   final List<String> interests;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final UserLocation? location;
 
   const UserProfile({
     required this.uid,
@@ -19,6 +20,7 @@ class UserProfile {
     this.interests = const [],
     required this.createdAt,
     required this.updatedAt,
+    this.location,
   });
 
   bool get isComplete =>
@@ -34,6 +36,7 @@ class UserProfile {
     'interests': interests,
     'createdAt': createdAt.millisecondsSinceEpoch,
     'updatedAt': updatedAt.millisecondsSinceEpoch,
+    if (location != null) 'location': location!.toMap(),
   };
 
   factory UserProfile.fromMap(Map<String, dynamic> m) => UserProfile(
@@ -46,5 +49,35 @@ class UserProfile {
     interests: (m['interests'] as List?)?.cast<String>() ?? const [],
     createdAt: DateTime.fromMillisecondsSinceEpoch(m['createdAt'] as int? ?? 0),
     updatedAt: DateTime.fromMillisecondsSinceEpoch(m['updatedAt'] as int? ?? 0),
+    location: m['location'] != null
+        ? UserLocation.fromMap(m['location'] as Map<String, dynamic>)
+        : null,
+  );
+}
+
+class UserLocation {
+  final String geohash;
+  final DateTime? lastUpdated;
+  final bool isVisible;
+
+  const UserLocation({
+    required this.geohash,
+    this.lastUpdated,
+    this.isVisible = true,
+  });
+
+  Map<String, dynamic> toMap() => {
+    'geohash': geohash,
+    if (lastUpdated != null)
+      'lastUpdated': lastUpdated!.millisecondsSinceEpoch,
+    'isVisible': isVisible,
+  };
+
+  factory UserLocation.fromMap(Map<String, dynamic> m) => UserLocation(
+    geohash: m['geohash'] as String,
+    lastUpdated: m['lastUpdated'] != null
+        ? DateTime.fromMillisecondsSinceEpoch(m['lastUpdated'] as int)
+        : null,
+    isVisible: m['isVisible'] as bool? ?? true,
   );
 }
