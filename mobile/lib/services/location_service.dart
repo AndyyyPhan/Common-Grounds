@@ -11,10 +11,8 @@ class LocationService {
   static const String _locationKey = 'last_known_location';
   static const String _locationEnabledKey = 'location_enabled';
   
-  // Campus boundaries (example coordinates - replace with your campus)
-  static const double _campusLat = 40.7128; // Example: NYC coordinates
-  static const double _campusLng = -74.0060;
-  static const double _campusRadius = 1000; // 1km radius in meters
+  // Global matching - no campus restrictions
+  // Users can match anywhere in the world
   
   StreamController<Position>? _locationController;
   StreamSubscription<Position>? _locationSubscription;
@@ -117,18 +115,14 @@ class LocationService {
     }
   }
 
-  /// Check if user is on campus
+  /// Check if user location is valid (always true for global matching)
   bool isOnCampus(Position? position) {
     if (position == null) return false;
     
-    final distance = Geolocator.distanceBetween(
-      _campusLat,
-      _campusLng,
-      position.latitude,
-      position.longitude,
-    );
+    print('User position: ${position.latitude}, ${position.longitude}');
+    print('Global matching enabled - location valid anywhere');
     
-    return distance <= _campusRadius;
+    return true; // Allow matching anywhere in the world
   }
 
   /// Get coarse location (rounded to reduce precision)

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/user_profile.dart';
 import '../models/match.dart';
@@ -98,7 +99,7 @@ class MatchingService {
         'latitude': coarseLocation['lat'],
         'longitude': coarseLocation['lng'],
         'timestamp': FieldValue.serverTimestamp(),
-        'isOnCampus': _locationService.isOnCampus(position),
+        'isActive': true, // Always active for global matching
       }, SetOptions(merge: true));
     } catch (e) {
       print('Error updating user location: $e');
@@ -108,49 +109,73 @@ class MatchingService {
   /// Perform matching algorithm
   Future<void> _performMatching() async {
     try {
+      print('🔍 Starting matching process...');
       final currentUser = await _getCurrentUser();
-      if (currentUser == null) return;
+      if (currentUser == null) {
+        print('❌ No current user found');
+        return;
+      }
+      print('✅ Current user: ${currentUser.uid}');
 
       final currentPosition = _locationService.lastKnownPosition;
-      if (currentPosition == null) return;
+      if (currentPosition == null) {
+        print('❌ No current position found');
+        return;
+      }
+      print('✅ Current position: ${currentPosition.latitude}, ${currentPosition.longitude}');
 
       // Update current user's location
       await updateUserLocation(currentUser.uid, currentPosition);
+      print('✅ Updated user location in database');
 
       // Get nearby active users
       final nearbyUsers = await _getNearbyActiveUsers(currentPosition);
+      print('🔍 Found ${nearbyUsers.length} nearby users');
       
       // Find matches
       for (final nearbyUser in nearbyUsers) {
+        print('🔍 Checking match with user: ${nearbyUser.uid}');
         if (await _shouldCreateMatch(currentUser, nearbyUser)) {
+          print('✅ Creating match between ${currentUser.uid} and ${nearbyUser.uid}');
           await _createMatch(currentUser, nearbyUser);
+        } else {
+          print('❌ No match criteria met');
         }
       }
     } catch (e) {
-      print('Error in matching process: $e');
+      print('❌ Error in matching process: $e');
     }
   }
 
   /// Get current user from auth
   Future<UserProfile?> _getCurrentUser() async {
-    // This would typically get the current user from your auth service
-    // For now, we'll return null and handle this in the calling code
-    return null;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+      
+      return await ProfileService.instance.getProfile(user.uid);
+    } catch (e) {
+      print('Error getting current user: $e');
+      return null;
+    }
   }
 
   /// Get nearby active users
   Future<List<UserProfile>> _getNearbyActiveUsers(Position position) async {
     try {
+      print('🔍 Getting active users from database...');
       // Get all active users
       final activeUsersSnapshot = await _db
           .collection(_activeUsersCollection)
           .where('isActive', isEqualTo: true)
           .get();
 
+      print('📊 Found ${activeUsersSnapshot.docs.length} active users in database');
       final nearbyUsers = <UserProfile>[];
 
       for (final doc in activeUsersSnapshot.docs) {
         final userId = doc.id;
+        print('🔍 Checking user: $userId');
         
         // Get user location
         final locationDoc = await _db
@@ -163,6 +188,8 @@ class MatchingService {
           final userLat = locationData['latitude'] as double;
           final userLng = locationData['longitude'] as double;
           
+          print('📍 User location: $userLat, $userLng');
+          
           // Calculate distance
           final distance = Geolocator.distanceBetween(
             position.latitude,
@@ -171,19 +198,28 @@ class MatchingService {
             userLng,
           );
 
+          print('📏 Distance: ${distance.toStringAsFixed(2)}m (threshold: ${_proximityThreshold}m)');
+
           if (distance <= _proximityThreshold) {
+            print('✅ User is within proximity!');
             // Get user profile
             final profile = await ProfileService.instance.getProfile(userId);
             if (profile != null) {
+              print('✅ Added user to nearby list: ${profile.displayName}');
               nearbyUsers.add(profile);
             }
+          } else {
+            print('❌ User is too far away');
           }
+        } else {
+          print('❌ No location data for user: $userId');
         }
       }
 
+      print('🎯 Total nearby users: ${nearbyUsers.length}');
       return nearbyUsers;
     } catch (e) {
-      print('Error getting nearby users: $e');
+      print('❌ Error getting nearby users: $e');
       return [];
     }
   }

@@ -4,13 +4,13 @@ A privacy-first mobile app for college students to connect based on shared inter
 
 ## 🎯 Project Overview
 
-Common Grounds helps college students find and connect with nearby peers who share similar interests. The app uses coarse location data and interest matching to facilitate meaningful connections while maintaining user privacy and safety.
+Common Grounds helps students find and connect with nearby peers who share similar interests, anywhere in the world. The app uses proximity-based location matching and interest overlap to facilitate meaningful connections while maintaining user privacy and safety.
 
 ### Key Features
 
 - **Privacy-First Design**: Coarse location sharing, mutual consent, and comprehensive privacy controls
 - **Interest-Based Matching**: Connect with students who share your hobbies and interests
-- **Proximity Detection**: Find matches within 50 meters using geofencing
+- **Global Proximity Matching**: Find matches within 50 meters anywhere in the world
 - **In-App Messaging**: Secure 1:1 chat with matched users
 - **Push Notifications**: Get notified when potential matches are nearby
 - **Privacy Controls**: Granular settings for location precision, data sharing, and notifications
@@ -42,9 +42,9 @@ Common Grounds helps college students find and connect with nearby peers who sha
    - Ensure `google-services.json` is in `android/app/`
    - Verify Firebase configuration in `lib/firebase_options.dart`
 
-4. **Update campus coordinates**
-   - Edit `lib/services/location_service.dart`
-   - Update `_campusLat`, `_campusLng`, and `_campusRadius` for your campus
+4. **Configure proximity settings** (optional)
+   - Edit `lib/services/matching_service.dart`
+   - Adjust `_proximityThreshold` for different matching distances
 
 5. **Run the app**
    ```bash
@@ -106,15 +106,13 @@ The app requires the following permissions (already configured):
    - Enable FCM for push notifications
    - Configure notification channels
 
-### Campus Configuration
+### Proximity Configuration
 
-Update the campus boundaries in `lib/services/location_service.dart`:
+The app matches users within 50 meters by default. To change this, update `lib/services/matching_service.dart`:
 
 ```dart
-// Replace with your campus coordinates
-static const double _campusLat = 40.7128; // Your campus latitude
-static const double _campusLng = -74.0060; // Your campus longitude
-static const double _campusRadius = 1000; // Campus radius in meters
+// Adjust matching distance
+static const double _proximityThreshold = 50.0; // meters
 ```
 
 ## 🧪 Testing
