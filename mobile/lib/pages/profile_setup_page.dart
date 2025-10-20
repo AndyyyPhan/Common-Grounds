@@ -45,10 +45,6 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   @override
   void initState() {
     super.initState();
-    final fallbackName =
-        widget.profile.displayName ??
-        FirebaseAuth.instance.currentUser?.displayName ??
-        '';
     _name = TextEditingController(text: widget.profile.displayName ?? '');
     _bio = TextEditingController(text: widget.profile.bio ?? '');
     _major = TextEditingController(text: widget.profile.major ?? '');
