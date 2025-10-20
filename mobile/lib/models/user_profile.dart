@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class UserProfile {
   final String uid;
   final String? displayName;
@@ -73,11 +75,21 @@ class UserLocation {
     'isVisible': isVisible,
   };
 
-  factory UserLocation.fromMap(Map<String, dynamic> m) => UserLocation(
-    geohash: m['geohash'] as String,
-    lastUpdated: m['lastUpdated'] != null
-        ? DateTime.fromMillisecondsSinceEpoch(m['lastUpdated'] as int)
-        : null,
-    isVisible: m['isVisible'] as bool? ?? true,
-  );
+  factory UserLocation.fromMap(Map<String, dynamic> m) {
+    DateTime? lastUpdated;
+    if (m['lastUpdated'] != null) {
+      final lastUpdatedValue = m['lastUpdated'];
+      if (lastUpdatedValue is Timestamp) {
+        lastUpdated = lastUpdatedValue.toDate();
+      } else if (lastUpdatedValue is int) {
+        lastUpdated = DateTime.fromMillisecondsSinceEpoch(lastUpdatedValue);
+      }
+    }
+
+    return UserLocation(
+      geohash: m['geohash'] as String,
+      lastUpdated: lastUpdated,
+      isVisible: m['isVisible'] as bool? ?? true,
+    );
+  }
 }
