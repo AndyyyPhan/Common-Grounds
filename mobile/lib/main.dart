@@ -10,6 +10,7 @@ import 'services/profile_service.dart';
 import 'models/user_profile.dart';
 import 'pages/profile_setup_page.dart';
 import 'services/messaging_service.dart';
+import 'services/location_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,6 +59,16 @@ class _BootstrapGateState extends State<BootstrapGate> {
     if (mounted) setState(() {});
   }
 
+  /// Initialize FCM and location services for the authenticated user
+  Future<void> _initUserServices(String uid) async {
+    // Initialize FCM for push notifications
+    await MessagingService.instance.initForUser(uid);
+
+    // Initialize location tracking (will request permissions)
+    // Don't fail if location permission is denied - user can enable later
+    await LocationService.instance.initForUser(uid);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_onboarded == null) {
@@ -82,21 +93,21 @@ class _BootstrapGateState extends State<BootstrapGate> {
         final user = authSnap.data;
         if (user == null) return const SignInPage();
 
-        // Ensure there’s a profile doc, then watch it.
+        // Ensure there's a profile doc, then watch it.
         return FutureBuilder<void>(
-          future: MessagingService.instance.initForUser(user.uid),
-          builder: (context, fcmSnap) {
-            if (fcmSnap.connectionState != ConnectionState.done) {
+          future: _initUserServices(user.uid),
+          builder: (context, initSnap) {
+            if (initSnap.connectionState != ConnectionState.done) {
               return const Scaffold(
                 body: Center(child: CircularProgressIndicator()),
               );
             }
-            // If FCM init fails, don't block the app—just continue
+            // If init fails, don't block the app—just continue
             // (you can show a snackbar/toast elsewhere if desired)
-            if (fcmSnap.hasError) {
+            if (initSnap.hasError) {
               return Scaffold(
                 body: Center(
-                  child: Text('Profile init error: ${fcmSnap.error}'),
+                  child: Text('Service init error: ${initSnap.error}'),
                 ),
               );
             }
