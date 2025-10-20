@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/user_profile.dart';
 import '../services/profile_service.dart';
+import '../services/location_service.dart';
 import 'profile_setup_page.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -154,12 +155,192 @@ class ProfilePage extends StatelessWidget {
                         Chip(label: Text(tag)),
                     ],
                   ),
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
+                _LocationSettings(profile: profile),
               ],
             ),
           ),
         );
       },
     );
+  }
+}
+
+class _LocationSettings extends StatefulWidget {
+  final UserProfile profile;
+  const _LocationSettings({required this.profile});
+
+  @override
+  State<_LocationSettings> createState() => _LocationSettingsState();
+}
+
+class _LocationSettingsState extends State<_LocationSettings> {
+  bool _isToggling = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final location = widget.profile.location;
+    final isVisible = location?.isVisible ?? false;
+    final lastUpdated = location?.lastUpdated;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.location_on, size: 20, color: Colors.black54),
+            const SizedBox(width: 8),
+            const Text(
+              'Location Sharing',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Share my location',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Help nearby students with similar interests find you',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: isVisible,
+                      onChanged: _isToggling
+                          ? null
+                          : (value) async {
+                              setState(() => _isToggling = true);
+                              try {
+                                await LocationService.instance
+                                    .setLocationVisibility(
+                                  widget.profile.uid,
+                                  value,
+                                );
+                                if (mounted && value) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Location sharing enabled',
+                                      ),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                if (mounted) {
+                                  setState(() => _isToggling = false);
+                                }
+                              }
+                            },
+                    ),
+                  ],
+                ),
+                if (lastUpdated != null) ...[
+                  const SizedBox(height: 8),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Last updated: ${_formatTimestamp(lastUpdated)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (isVisible) ...[
+                  const SizedBox(height: 8),
+                  TextButton.icon(
+                    onPressed: () async {
+                      try {
+                        await LocationService.instance.refreshLocation();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Location refreshed'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error refreshing: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('Refresh now'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Your exact location is never shared. We use coarse location data to find nearby students within approximately 1-2km.',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatTimestamp(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
   }
 }
 
