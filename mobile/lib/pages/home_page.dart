@@ -209,8 +209,10 @@ class HomePage extends StatelessWidget {
                 label: 'Refresh Location',
                 onTap: () async {
                   await LocationService.instance.refreshLocation();
+                  // Force refresh matches after location update
+                  await ProximityService.instance.refreshMatches(profile);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Location updated! Looking for nearby students...')),
+                    const SnackBar(content: Text('Location updated! Refreshing nearby students...')),
                   );
                 },
               ),
@@ -379,7 +381,7 @@ class HomePage extends StatelessWidget {
                           print('🧪 TEST: Location visible: ${profile.location?.isVisible}');
                           print('🧪 TEST: Location coords: ${profile.location?.latitude}, ${profile.location?.longitude}');
                           print('🧪 TEST: Interests: ${profile.interests}');
-                          final matches = await ProximityService.instance.findNearbyMatches(profile);
+                          final matches = await ProximityService.instance.refreshMatches(profile);
                           print('🧪 TEST: Found ${matches.length} matches');
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('Test: Found ${matches.length} matches')),

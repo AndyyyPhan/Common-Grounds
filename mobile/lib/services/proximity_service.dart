@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:math';
+import 'dart:async';
 import '../models/user_profile.dart';
 
 /// Service for finding nearby users with similar interests
@@ -9,6 +10,11 @@ class ProximityService {
   static final instance = ProximityService._();
 
   final _db = FirebaseFirestore.instance;
+  
+  // Caching for performance
+  final Map<String, List<ProximityMatch>> _matchCache = {};
+  final Map<String, DateTime> _cacheTimestamps = {};
+  static const Duration _cacheExpiry = Duration(minutes: 5);
 
   /// Find nearby users with similar interests
   /// 
@@ -24,6 +30,13 @@ class ProximityService {
     int limit = 10,
   }) async {
     try {
+      // Check cache first
+      final cacheKey = '${currentUserProfile.uid}_${maxDistanceKm}_${minCommonInterests}';
+      final cachedMatches = _getCachedMatches(cacheKey);
+      if (cachedMatches != null) {
+        debugPrint('🚀 Using cached matches: ${cachedMatches.length} results');
+        return cachedMatches.take(limit).toList();
+      }
       // Check if user has location and interests
       if (currentUserProfile.location?.isVisible != true) {
         debugPrint('User location not visible');
@@ -55,71 +68,72 @@ class ProximityService {
       debugPrint('🔍 Searching in ${nearbyGeohashes.length} geohash areas');
       debugPrint('🔍 Nearby geohashes: $nearbyGeohashes');
 
-      // Query users in nearby geohashes
+      // OPTIMIZED: Single query with array-contains-any for multiple geohashes
       final List<ProximityMatch> matches = [];
       
-      // First try geohash-based search
-      for (final geohash in nearbyGeohashes.take(5)) { // Limit to first 5 for performance
-        final query = await _db
-            .collection('users')
-            .where('location.geohash', isEqualTo: geohash)
-            .where('location.isVisible', isEqualTo: true)
-            .limit(limit * 2) // Get more to filter by interests
-            .get();
+      // Use array-contains-any for efficient multi-geohash search
+      final query = await _db
+          .collection('users')
+          .where('location.geohash', whereIn: nearbyGeohashes)
+          .where('location.isVisible', isEqualTo: true)
+          .limit(100) // Get more users for filtering
+          .get();
 
-        debugPrint('🔍 Querying geohash $geohash: found ${query.docs.length} users');
+      debugPrint('🔍 Single optimized query found ${query.docs.length} users');
 
-        for (final doc in query.docs) {
-          // Skip current user
-          if (doc.id == currentUserProfile.uid) continue;
+      // Pre-compute current user's interest set for O(1) lookups
+      final currentInterestsSet = currentUserProfile.interests.toSet();
 
-          try {
-            final userProfile = UserProfile.fromMap(doc.data());
-            
-            // Check if user has location coordinates
-            if (userProfile.location?.latitude == null || 
-                userProfile.location?.longitude == null) {
-              continue;
-            }
+      for (final doc in query.docs) {
+        // Skip current user
+        if (doc.id == currentUserProfile.uid) continue;
 
-            // Calculate distance
-            final distance = _calculateDistance(
-              currentLat,
-              currentLng,
-              userProfile.location!.latitude!,
-              userProfile.location!.longitude!,
-            );
-
-            // Filter by distance
-            if (distance > maxDistanceKm) continue;
-
-            // Calculate common interests
-            final commonInterests = _getCommonInterests(
-              currentUserProfile.interests,
-              userProfile.interests,
-            );
-
-            // Filter by minimum common interests
-            if (commonInterests.length < minCommonInterests) continue;
-
-            // Calculate match score (higher is better)
-            final matchScore = _calculateMatchScore(
-              commonInterests.length,
-              currentUserProfile.interests.length,
-              userProfile.interests.length,
-              distance,
-            );
-
-            matches.add(ProximityMatch(
-              userProfile: userProfile,
-              distanceKm: distance,
-              commonInterests: commonInterests,
-              matchScore: matchScore,
-            ));
-          } catch (e) {
-            debugPrint('Error parsing user profile ${doc.id}: $e');
+        try {
+          final userProfile = UserProfile.fromMap(doc.data());
+          
+          // Check if user has location coordinates
+          if (userProfile.location?.latitude == null || 
+              userProfile.location?.longitude == null) {
             continue;
           }
+
+          // Calculate distance
+          final distance = _calculateDistance(
+            currentLat,
+            currentLng,
+            userProfile.location!.latitude!,
+            userProfile.location!.longitude!,
+          );
+
+          // Filter by distance
+          if (distance > maxDistanceKm) continue;
+
+          // OPTIMIZED: Fast interest matching using sets
+          final commonInterests = _getCommonInterestsOptimized(
+            currentInterestsSet,
+            userProfile.interests,
+          );
+
+          // Filter by minimum common interests
+          if (commonInterests.length < minCommonInterests) continue;
+
+          // Calculate match score (higher is better)
+          final matchScore = _calculateMatchScore(
+            commonInterests.length,
+            currentUserProfile.interests.length,
+            userProfile.interests.length,
+            distance,
+          );
+
+          matches.add(ProximityMatch(
+            userProfile: userProfile,
+            distanceKm: distance,
+            commonInterests: commonInterests,
+            matchScore: matchScore,
+          ));
+        } catch (e) {
+          debugPrint('Error parsing user profile ${doc.id}: $e');
+          continue;
         }
       }
 
@@ -158,9 +172,9 @@ class ProximityService {
             // Filter by distance (more lenient for broad search)
             if (distance > maxDistanceKm * 2) continue;
 
-            // Calculate common interests
-            final commonInterests = _getCommonInterests(
-              currentUserProfile.interests,
+            // OPTIMIZED: Fast interest matching using sets
+            final commonInterests = _getCommonInterestsOptimized(
+              currentInterestsSet,
               userProfile.interests,
             );
 
@@ -202,6 +216,9 @@ class ProximityService {
         debugPrint('   Common interests: ${match.commonInterests}');
       }
 
+      // Cache the results
+      _cacheMatches(cacheKey, limitedMatches);
+
       return limitedMatches;
     } catch (e) {
       debugPrint('Error finding nearby matches: $e');
@@ -209,23 +226,50 @@ class ProximityService {
     }
   }
 
-  /// Get nearby geohashes for proximity search
+  /// Get nearby geohashes for proximity search - OPTIMIZED
   List<String> _getNearbyGeohashes(String centerGeohash, double maxDistanceKm) {
-    // Simplified approach for testing - search broader area
-    final geohashes = <String>{centerGeohash};
+    final geohashes = <String>{};
     
-    // For testing, let's search a broader area by using shorter geohash
-    final baseGeohash = centerGeohash.substring(0, 3); // Use first 3 chars for very broad search
-    
-    // Add variations to expand search area significantly
-    for (int i = 0; i < 10; i++) {
-      for (int j = 0; j < 10; j++) {
-        geohashes.add('${baseGeohash}${i.toString()}${j.toString()}');
-      }
+    // Use proper geohash precision based on distance
+    int precision;
+    if (maxDistanceKm <= 1) {
+      precision = 6; // ~1.2km x 0.6km
+    } else if (maxDistanceKm <= 5) {
+      precision = 5; // ~4.9km x 4.9km  
+    } else if (maxDistanceKm <= 20) {
+      precision = 4; // ~19.5km x 19.5km
+    } else {
+      precision = 3; // ~156km x 156km
     }
     
-    debugPrint('🔍 Generated ${geohashes.length} geohashes for search');
+    // Use only the precision we need
+    final baseGeohash = centerGeohash.substring(0, precision);
+    geohashes.add(baseGeohash);
+    
+    // Add only immediate neighbors (8 surrounding geohashes)
+    final neighbors = _getGeohashNeighbors(baseGeohash);
+    geohashes.addAll(neighbors);
+    
+    debugPrint('🔍 Generated ${geohashes.length} optimized geohashes for search');
     return geohashes.toList();
+  }
+  
+  /// Get the 8 neighboring geohashes
+  List<String> _getGeohashNeighbors(String geohash) {
+    // Simplified neighbor calculation - in production, use proper geohash library
+    final neighbors = <String>{};
+    final chars = '0123456789bcdefghjkmnpqrstuvwxyz';
+    
+    for (int i = 0; i < geohash.length; i++) {
+      final char = geohash[i];
+      final index = chars.indexOf(char);
+      
+      // Add variations for each position
+      if (index > 0) neighbors.add(geohash.substring(0, i) + chars[index - 1] + geohash.substring(i + 1));
+      if (index < chars.length - 1) neighbors.add(geohash.substring(0, i) + chars[index + 1] + geohash.substring(i + 1));
+    }
+    
+    return neighbors.toList();
   }
 
   /// Calculate distance between two points using Haversine formula
@@ -249,9 +293,9 @@ class ProximityService {
     return degrees * (3.14159265359 / 180);
   }
 
-  /// Get common interests between two users
-  List<String> _getCommonInterests(List<String> interests1, List<String> interests2) {
-    return interests1.where((interest) => interests2.contains(interest)).toList();
+  /// OPTIMIZED: Get common interests between two users using Set intersection
+  List<String> _getCommonInterestsOptimized(Set<String> interests1Set, List<String> interests2) {
+    return interests2.where((interest) => interests1Set.contains(interest)).toList();
   }
 
   /// Calculate match score based on interests and distance
@@ -272,21 +316,89 @@ class ProximityService {
     return (interestSimilarity * 0.7) + (distanceScore * 0.3);
   }
 
-  /// Stream of nearby matches (real-time updates)
+  /// Stream of nearby matches (real-time updates) - OPTIMIZED
   Stream<List<ProximityMatch>> watchNearbyMatches(
     UserProfile currentUserProfile, {
     double maxDistanceKm = 5.0,
     int minCommonInterests = 1,
     int limit = 10,
   }) {
-    return Stream.periodic(const Duration(minutes: 2), (_) {
-      return findNearbyMatches(
+    // Create a controller for immediate start
+    final controller = StreamController<List<ProximityMatch>>();
+    
+    // Start with immediate search
+    findNearbyMatches(
+      currentUserProfile,
+      maxDistanceKm: maxDistanceKm,
+      minCommonInterests: minCommonInterests,
+      limit: limit,
+    ).then((matches) {
+      controller.add(matches);
+    }).catchError((error) {
+      controller.addError(error);
+    });
+    
+    // Then update every 2 minutes
+    Timer.periodic(const Duration(minutes: 2), (timer) {
+      findNearbyMatches(
         currentUserProfile,
         maxDistanceKm: maxDistanceKm,
         minCommonInterests: minCommonInterests,
         limit: limit,
-      );
-    }).asyncMap((future) => future);
+      ).then((matches) {
+        controller.add(matches);
+      }).catchError((error) {
+        controller.addError(error);
+      });
+    });
+    
+    return controller.stream;
+  }
+
+  /// Get cached matches if they exist and are not expired
+  List<ProximityMatch>? _getCachedMatches(String cacheKey) {
+    final timestamp = _cacheTimestamps[cacheKey];
+    if (timestamp == null) return null;
+    
+    if (DateTime.now().difference(timestamp) > _cacheExpiry) {
+      _matchCache.remove(cacheKey);
+      _cacheTimestamps.remove(cacheKey);
+      return null;
+    }
+    
+    return _matchCache[cacheKey];
+  }
+
+  /// Cache matches with timestamp
+  void _cacheMatches(String cacheKey, List<ProximityMatch> matches) {
+    _matchCache[cacheKey] = matches;
+    _cacheTimestamps[cacheKey] = DateTime.now();
+  }
+
+  /// Clear all cached matches
+  void clearCache() {
+    _matchCache.clear();
+    _cacheTimestamps.clear();
+  }
+
+  /// Force refresh matches (bypasses cache)
+  Future<List<ProximityMatch>> refreshMatches(
+    UserProfile currentUserProfile, {
+    double maxDistanceKm = 5.0,
+    int minCommonInterests = 1,
+    int limit = 10,
+  }) async {
+    // Clear cache for this user to force fresh search
+    final cacheKey = '${currentUserProfile.uid}_${maxDistanceKm}_${minCommonInterests}';
+    _matchCache.remove(cacheKey);
+    _cacheTimestamps.remove(cacheKey);
+    
+    return await findNearbyMatches(
+      currentUserProfile,
+      maxDistanceKm: maxDistanceKm,
+      minCommonInterests: minCommonInterests,
+      limit: limit,
+    );
   }
 }
 

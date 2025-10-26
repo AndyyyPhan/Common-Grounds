@@ -1,0 +1,51 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "location.geohash",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "location.isVisible",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "location.lastUpdated",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "location.isVisible",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "location.lastUpdated",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "interests",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "location.isVisible",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
