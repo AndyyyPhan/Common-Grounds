@@ -11,14 +11,30 @@ class ProfileService {
       _db.collection('users').doc(uid);
 
   Future<UserProfile?> getProfile(String uid) async {
-    final snap = await _doc(uid).get();
-    if (!snap.exists) return null;
-    return UserProfile.fromMap(snap.data()!);
+    try {
+      final snap = await _doc(uid).get();
+      if (!snap.exists) return null;
+      return UserProfile.fromMap(snap.data()!);
+    } catch (e) {
+      // Log the error for debugging
+      print('Error loading profile for uid $uid: $e');
+      rethrow;
+    }
   }
 
   Stream<UserProfile?> watchProfile(String uid) {
     return _doc(uid).snapshots().map(
-      (s) => s.data() == null ? null : UserProfile.fromMap(s.data()!),
+      (s) {
+        if (s.data() == null) return null;
+        try {
+          return UserProfile.fromMap(s.data()!);
+        } catch (e) {
+          // Log the error for debugging
+          print('Error parsing profile data for uid $uid: $e');
+          // Return null to indicate profile couldn't be loaded
+          return null;
+        }
+      },
     );
   }
 

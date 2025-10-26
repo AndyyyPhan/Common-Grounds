@@ -16,7 +16,10 @@ import '../core/widgets/avatar.dart';
 import '../core/widgets/empty_state.dart';
 import '../core/widgets/loading_indicator.dart';
 import '../services/profile_service.dart';
+import '../services/proximity_service.dart';
+import '../services/location_service.dart';
 import '../models/user_profile.dart';
+import '../utils/chat_utils.dart';
 import 'profile_setup_page.dart';
 
 class HomePage extends StatelessWidget {
@@ -204,8 +207,8 @@ class HomePage extends StatelessWidget {
               child: _ActionButton(
                 icon: Icons.my_location,
                 label: 'Refresh Location',
-                onTap: () {
-                  // TODO: Manually trigger location update
+                onTap: () async {
+                  await LocationService.instance.refreshLocation();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Location updated! Looking for nearby students...')),
                   );
@@ -305,33 +308,225 @@ class HomePage extends StatelessWidget {
             ),
           )
         else
-          // TODO: Show real matched students here
-          // For now, show placeholder
-          AppCard(
-            padding: AppSpacing.lg,
-            child: Column(
-              children: [
-                Icon(
-                  Icons.radar,
-                  size: 64,
-                  color: AppColors.primary.withValues(alpha: 0.3),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  'Scanning for nearby students...',
-                  style: Theme.of(context).textTheme.titleMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'We\'ll notify you when we find students with similar interests nearby',
-                  style: Theme.of(context).textTheme.bodySmall,
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
+          // Show real matched students
+          StreamBuilder<List<ProximityMatch>>(
+            stream: ProximityService.instance.watchNearbyMatches(profile),
+            builder: (context, snapshot) {
+              print('🏠 HOME PAGE: StreamBuilder triggered');
+              print('🏠 HOME PAGE: Connection state: ${snapshot.connectionState}');
+              print('🏠 HOME PAGE: Has data: ${snapshot.hasData}');
+              print('🏠 HOME PAGE: Has error: ${snapshot.hasError}');
+              if (snapshot.hasError) {
+                print('🏠 HOME PAGE: Error: ${snapshot.error}');
+              }
+              if (snapshot.hasData) {
+                print('🏠 HOME PAGE: Matches count: ${snapshot.data!.length}');
+              }
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return AppCard(
+                  padding: AppSpacing.lg,
+                  child: Column(
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        'Finding nearby students...',
+                        style: Theme.of(context).textTheme.titleMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final matches = snapshot.data ?? [];
+              
+              if (matches.isEmpty) {
+                return AppCard(
+                  padding: AppSpacing.lg,
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.search_off,
+                        size: 64,
+                        color: AppColors.primary.withValues(alpha: 0.3),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Text(
+                        'No nearby matches found',
+                        style: Theme.of(context).textTheme.titleMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Try refreshing your location or adding more interests',
+                        style: Theme.of(context).textTheme.bodySmall,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      FilledButton.icon(
+                        onPressed: () async {
+                          await LocationService.instance.refreshLocation();
+                        },
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Refresh Location'),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      FilledButton.icon(
+                        onPressed: () async {
+                          print('🧪 TEST: Manually triggering proximity search');
+                          print('🧪 TEST: Current profile: ${profile.displayName}');
+                          print('🧪 TEST: Location visible: ${profile.location?.isVisible}');
+                          print('🧪 TEST: Location coords: ${profile.location?.latitude}, ${profile.location?.longitude}');
+                          print('🧪 TEST: Interests: ${profile.interests}');
+                          final matches = await ProximityService.instance.findNearbyMatches(profile);
+                          print('🧪 TEST: Found ${matches.length} matches');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Test: Found ${matches.length} matches')),
+                          );
+                        },
+                        icon: const Icon(Icons.bug_report),
+                        label: const Text('Test Search'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return Column(
+                children: [
+                  for (final match in matches.take(3)) // Show top 3 matches
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      child: _buildMatchCard(context, match),
+                    ),
+                  if (matches.length > 3)
+                    TextButton(
+                      onPressed: () {
+                        // TODO: Navigate to full matches list
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('${matches.length - 3} more matches available')),
+                        );
+                      },
+                      child: Text('View ${matches.length - 3} more matches'),
+                    ),
+                ],
+              );
+            },
           ),
       ],
+    );
+  }
+
+  /// Build a match card for displaying a proximity match
+  Widget _buildMatchCard(BuildContext context, ProximityMatch match) {
+    final user = match.userProfile;
+    
+    return AppCard(
+      child: InkWell(
+        onTap: () async {
+          // Start conversation with this user
+          await ChatUtils.startConversationWith(context, user.uid);
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Row(
+            children: [
+              // Avatar
+              CircleAvatar(
+                radius: 24,
+                backgroundImage: user.photoUrl != null 
+                    ? NetworkImage(user.photoUrl!) 
+                    : null,
+                child: user.photoUrl == null 
+                    ? const Icon(Icons.person, size: 24)
+                    : null,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              
+              // User info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.displayName ?? 'Student',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          size: 12,
+                          color: AppColors.textSecondaryLight,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          match.formattedDistance,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondaryLight,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.favorite,
+                          size: 12,
+                          color: AppColors.textSecondaryLight,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${match.matchPercentage}% match',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondaryLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    // Common interests
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 2,
+                      children: match.commonInterests.take(3).map((interest) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            interest,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.primary,
+                              fontSize: 10,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Chat button
+              IconButton(
+                onPressed: () async {
+                  await ChatUtils.startConversationWith(context, user.uid);
+                },
+                icon: const Icon(Icons.chat_bubble_outline),
+                tooltip: 'Start conversation',
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

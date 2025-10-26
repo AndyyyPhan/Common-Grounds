@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../models/user_profile.dart';
 import '../services/profile_service.dart';
@@ -178,6 +179,38 @@ class _LocationSettings extends StatefulWidget {
 
 class _LocationSettingsState extends State<_LocationSettings> {
   bool _isToggling = false;
+  Position? _currentPosition;
+  bool _isLoadingCoordinates = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentCoordinates();
+  }
+
+  Future<void> _loadCurrentCoordinates() async {
+    setState(() => _isLoadingCoordinates = true);
+    try {
+      // Check permission first
+      final hasPermission = await LocationService.instance.hasLocationPermission();
+      print('DEBUG: Has location permission: $hasPermission');
+      
+      final position = await LocationService.instance.getCurrentCoordinates();
+      print('DEBUG: Got position: $position');
+      
+      if (mounted) {
+        setState(() {
+          _currentPosition = position;
+          _isLoadingCoordinates = false;
+        });
+      }
+    } catch (e) {
+      print('DEBUG: Error getting coordinates: $e');
+      if (mounted) {
+        setState(() => _isLoadingCoordinates = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -289,6 +322,77 @@ class _LocationSettingsState extends State<_LocationSettings> {
                     ],
                   ),
                 ],
+                // Current coordinates display
+                const SizedBox(height: 8),
+                const Divider(),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.my_location, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Current Location',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          if (_isLoadingCoordinates)
+                            Text(
+                              'Loading coordinates...',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[600],
+                                fontStyle: FontStyle.italic,
+                              ),
+                            )
+                          else if (_currentPosition != null)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${_currentPosition!.latitude.toStringAsFixed(6)}, ${_currentPosition!.longitude.toStringAsFixed(6)}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey[600],
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Accuracy: ${_currentPosition!.accuracy.toStringAsFixed(0)}m',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            Text(
+                              'Location not available - Check permissions',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[600],
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh, size: 16),
+                      onPressed: _isLoadingCoordinates ? null : _loadCurrentCoordinates,
+                      tooltip: 'Refresh coordinates',
+                    ),
+                  ],
+                ),
                 if (isVisible) ...[
                   const SizedBox(height: 8),
                   TextButton.icon(

@@ -41,41 +41,59 @@ class UserProfile {
     if (location != null) 'location': location!.toMap(),
   };
 
-  factory UserProfile.fromMap(Map<String, dynamic> m) => UserProfile(
-    uid: m['uid'] as String,
-    displayName: m['displayName'] as String?,
-    photoUrl: m['photoUrl'] as String?,
-    bio: m['bio'] as String?,
-    classYear: m['classYear'] as String?,
-    major: m['major'] as String?,
-    interests: (m['interests'] as List?)?.cast<String>() ?? const [],
-    createdAt: DateTime.fromMillisecondsSinceEpoch(m['createdAt'] as int? ?? 0),
-    updatedAt: DateTime.fromMillisecondsSinceEpoch(m['updatedAt'] as int? ?? 0),
-    location: m['location'] != null
-        ? UserLocation.fromMap(m['location'] as Map<String, dynamic>)
-        : null,
-  );
+  factory UserProfile.fromMap(Map<String, dynamic> m) {
+    final uid = m['uid'];
+    if (uid == null || uid is! String) {
+      throw ArgumentError('UserProfile.fromMap: uid field is required and must be a String, got: $uid');
+    }
+    
+    return UserProfile(
+      uid: uid,
+      displayName: m['displayName'] as String?,
+      photoUrl: m['photoUrl'] as String?,
+      bio: m['bio'] as String?,
+      classYear: m['classYear'] as String?,
+      major: m['major'] as String?,
+      interests: (m['interests'] as List?)?.cast<String>() ?? const [],
+      createdAt: DateTime.fromMillisecondsSinceEpoch(m['createdAt'] as int? ?? 0),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(m['updatedAt'] as int? ?? 0),
+      location: m['location'] != null
+          ? UserLocation.fromMap(m['location'] as Map<String, dynamic>)
+          : null,
+    );
+  }
 }
 
 class UserLocation {
   final String geohash;
+  final double? latitude;
+  final double? longitude;
   final DateTime? lastUpdated;
   final bool isVisible;
 
   const UserLocation({
     required this.geohash,
+    this.latitude,
+    this.longitude,
     this.lastUpdated,
     this.isVisible = true,
   });
 
   Map<String, dynamic> toMap() => {
     'geohash': geohash,
+    if (latitude != null) 'latitude': latitude,
+    if (longitude != null) 'longitude': longitude,
     if (lastUpdated != null)
       'lastUpdated': lastUpdated!.millisecondsSinceEpoch,
     'isVisible': isVisible,
   };
 
   factory UserLocation.fromMap(Map<String, dynamic> m) {
+    final geohash = m['geohash'];
+    if (geohash == null || geohash is! String) {
+      throw ArgumentError('UserLocation.fromMap: geohash field is required and must be a String, got: $geohash');
+    }
+    
     DateTime? lastUpdated;
     if (m['lastUpdated'] != null) {
       final lastUpdatedValue = m['lastUpdated'];
@@ -87,7 +105,9 @@ class UserLocation {
     }
 
     return UserLocation(
-      geohash: m['geohash'] as String,
+      geohash: geohash,
+      latitude: m['latitude'] as double?,
+      longitude: m['longitude'] as double?,
       lastUpdated: lastUpdated,
       isVisible: m['isVisible'] as bool? ?? true,
     );

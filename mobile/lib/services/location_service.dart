@@ -97,6 +97,8 @@ class LocationService {
         'location': {
           'geohash': geohash,
           'geopoint': geoPoint.geopoint,
+          'latitude': position.latitude,
+          'longitude': position.longitude,
           'lastUpdated': FieldValue.serverTimestamp(),
           'isVisible': true, // User can toggle this in settings
         },
@@ -164,6 +166,24 @@ class LocationService {
   /// Manually refresh location now
   Future<void> refreshLocation() async {
     await _updateUserLocation();
+  }
+
+  /// Get current coordinates
+  Future<Position?> getCurrentCoordinates() async {
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.low,
+          distanceFilter: 100,
+        ),
+      );
+      return position;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Error getting current coordinates: $e');
+      }
+      return null;
+    }
   }
 
   /// Clean up resources
