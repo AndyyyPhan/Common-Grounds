@@ -85,5 +85,4 @@ class DefaultFirebaseOptions {
     storageBucket: 'blue4-commongrounds.firebasestorage.app',
     measurementId: 'G-DPDVVVGB5V',
   );
-
 }

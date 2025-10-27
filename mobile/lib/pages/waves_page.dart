@@ -242,10 +242,7 @@ class _MatchCelebrationDialogState extends State<_MatchCelebrationDialog>
       curve: Curves.elasticOut,
     );
 
-    _fadeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeIn,
-    );
+    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
 
     _controller.forward();
   }
@@ -293,9 +290,9 @@ class _MatchCelebrationDialogState extends State<_MatchCelebrationDialog>
                 Text(
                   "It's a Match!",
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                      ),
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
 

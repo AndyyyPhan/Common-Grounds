@@ -84,7 +84,9 @@ class WaveService {
       String? reverseWaveId;
       if (existingReverseWave == null) {
         // Create reverse wave as ACCEPTED (not pending)
-        debugPrint('👋 Auto-waving back from ${wave.receiverId} to ${wave.senderId}');
+        debugPrint(
+          '👋 Auto-waving back from ${wave.receiverId} to ${wave.senderId}',
+        );
         final reverseRef = _db.collection('waves').doc();
         final reverseWave = WaveRequest(
           id: reverseRef.id,
@@ -196,10 +198,12 @@ class WaveService {
         .where('status', isEqualTo: WaveStatus.pending.name)
         .orderBy('timestamp', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => WaveRequest.fromMap(doc.id, doc.data()))
-            .where((wave) => !wave.isExpired) // Filter out expired waves
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => WaveRequest.fromMap(doc.id, doc.data()))
+              .where((wave) => !wave.isExpired) // Filter out expired waves
+              .toList(),
+        );
   }
 
   /// Watch outgoing waves for a user (waves sent BY this user)
@@ -210,10 +214,12 @@ class WaveService {
         .where('status', isEqualTo: WaveStatus.pending.name)
         .orderBy('timestamp', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => WaveRequest.fromMap(doc.id, doc.data()))
-            .where((wave) => !wave.isExpired) // Filter out expired waves
-            .toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => WaveRequest.fromMap(doc.id, doc.data()))
+              .where((wave) => !wave.isExpired) // Filter out expired waves
+              .toList(),
+        );
   }
 
   /// Get all waves for a user (both incoming and outgoing)
@@ -223,13 +229,15 @@ class WaveService {
         .where('status', isEqualTo: WaveStatus.pending.name)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => WaveRequest.fromMap(doc.id, doc.data()))
-          .where((wave) =>
-              (wave.senderId == userId || wave.receiverId == userId) &&
-              !wave.isExpired)
-          .toList();
-    });
+          return snapshot.docs
+              .map((doc) => WaveRequest.fromMap(doc.id, doc.data()))
+              .where(
+                (wave) =>
+                    (wave.senderId == userId || wave.receiverId == userId) &&
+                    !wave.isExpired,
+              )
+              .toList();
+        });
   }
 
   /// Check if a mutual match exists between two users
@@ -253,20 +261,27 @@ class WaveService {
           .limit(1)
           .get();
 
-      final hasMutualMatch = wave1Query.docs.isNotEmpty && wave2Query.docs.isNotEmpty;
+      final hasMutualMatch =
+          wave1Query.docs.isNotEmpty && wave2Query.docs.isNotEmpty;
 
       if (hasMutualMatch) {
         debugPrint('🤝 Mutual match exists between $user1Id and $user2Id');
       } else {
         debugPrint('❌ No mutual match between $user1Id and $user2Id');
-        debugPrint('   Wave1 ($user1Id → $user2Id): ${wave1Query.docs.length} docs');
-        debugPrint('   Wave2 ($user2Id → $user1Id): ${wave2Query.docs.length} docs');
+        debugPrint(
+          '   Wave1 ($user1Id → $user2Id): ${wave1Query.docs.length} docs',
+        );
+        debugPrint(
+          '   Wave2 ($user2Id → $user1Id): ${wave2Query.docs.length} docs',
+        );
       }
 
       return hasMutualMatch;
     } catch (e) {
       debugPrint('⚠️ Error checking mutual match: $e');
-      debugPrint('   This usually means Firestore security rules need to be updated!');
+      debugPrint(
+        '   This usually means Firestore security rules need to be updated!',
+      );
       // Return false to be safe - don't allow messaging without proper permission check
       return false;
     }
@@ -292,7 +307,10 @@ class WaveService {
   }
 
   /// Check if there's an existing pending wave between two users (either direction)
-  Future<WaveRequest?> _checkExistingWave(String user1Id, String user2Id) async {
+  Future<WaveRequest?> _checkExistingWave(
+    String user1Id,
+    String user2Id,
+  ) async {
     try {
       // Check wave from user1 to user2
       final wave1Query = await _db
@@ -382,7 +400,10 @@ class WaveService {
   }
 
   /// Create a conversation for a mutual match
-  Future<void> _createConversationForMatch(String user1Id, String user2Id) async {
+  Future<void> _createConversationForMatch(
+    String user1Id,
+    String user2Id,
+  ) async {
     try {
       // Check if conversation already exists
       final existingConvo = await _db
@@ -391,9 +412,13 @@ class WaveService {
           .get();
 
       for (final doc in existingConvo.docs) {
-        final participants = List<String>.from(doc.data()['participants'] as List);
+        final participants = List<String>.from(
+          doc.data()['participants'] as List,
+        );
         if (participants.contains(user2Id)) {
-          debugPrint('Conversation already exists between $user1Id and $user2Id');
+          debugPrint(
+            'Conversation already exists between $user1Id and $user2Id',
+          );
           return;
         }
       }
@@ -416,21 +441,20 @@ class WaveService {
 
   /// Get all mutual matches for a user
   Stream<List<MutualMatch>> watchMutualMatches(String userId) {
-    return _db
-        .collection('mutual_matches')
-        .snapshots()
-        .map((snapshot) {
+    return _db.collection('mutual_matches').snapshots().map((snapshot) {
       return snapshot.docs
           .map((doc) => MutualMatch.fromMap(doc.data()))
-          .where((match) =>
-              match.user1Id == userId || match.user2Id == userId)
+          .where((match) => match.user1Id == userId || match.user2Id == userId)
           .toList()
         ..sort((a, b) => b.matchedAt.compareTo(a.matchedAt));
     });
   }
 
   /// Get a wave in any status (helper method)
-  Future<WaveRequest?> _getWaveInAnyStatus(String senderId, String receiverId) async {
+  Future<WaveRequest?> _getWaveInAnyStatus(
+    String senderId,
+    String receiverId,
+  ) async {
     try {
       final query = await _db
           .collection('waves')
@@ -462,9 +486,7 @@ class WaveService {
 
       final batch = _db.batch();
       for (final doc in expiredWaves.docs) {
-        batch.update(doc.reference, {
-          'status': WaveStatus.expired.name,
-        });
+        batch.update(doc.reference, {'status': WaveStatus.expired.name});
       }
 
       await batch.commit();

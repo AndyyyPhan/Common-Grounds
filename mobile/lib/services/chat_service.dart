@@ -109,22 +109,20 @@ class ChatService {
         .collection('conversations')
         .where('participantIds', arrayContains: userId)
         .snapshots()
-        .map(
-          (snapshot) {
-            final conversations = snapshot.docs
-                .map((doc) => Conversation.fromMap(doc.id, doc.data()))
-                .toList();
+        .map((snapshot) {
+          final conversations = snapshot.docs
+              .map((doc) => Conversation.fromMap(doc.id, doc.data()))
+              .toList();
 
-            // Sort in-app by lastMessageTime (most recent first)
-            conversations.sort((a, b) {
-              final aTime = a.lastMessageTime ?? a.createdAt;
-              final bTime = b.lastMessageTime ?? b.createdAt;
-              return bTime.compareTo(aTime);
-            });
+          // Sort in-app by lastMessageTime (most recent first)
+          conversations.sort((a, b) {
+            final aTime = a.lastMessageTime ?? a.createdAt;
+            final bTime = b.lastMessageTime ?? b.createdAt;
+            return bTime.compareTo(aTime);
+          });
 
-            return conversations;
-          },
-        );
+          return conversations;
+        });
   }
 
   /// Watch messages in a conversation (ordered by timestamp)

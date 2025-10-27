@@ -89,9 +89,9 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking image: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
       }
     }
   }
@@ -115,9 +115,9 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       return downloadUrl;
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error uploading image: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error uploading image: $e')));
       }
       return null;
     }
@@ -274,7 +274,10 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                             shape: BoxShape.circle,
                           ),
                           child: IconButton(
-                            icon: const Icon(Icons.camera_alt, color: Colors.white),
+                            icon: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                            ),
                             onPressed: _showImageSourceDialog,
                             tooltip: 'Change profile picture',
                           ),
@@ -347,10 +350,13 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                     },
                   ),
                 // Custom interests (show as selectable filter chips with delete option)
-                for (final customTag in _interests.where((i) => !kInterestOptions.contains(i)))
+                for (final customTag in _interests.where(
+                  (i) => !kInterestOptions.contains(i),
+                ))
                   FilterChip(
                     label: Text(customTag),
-                    selected: true, // Custom interests are always selected (they're in _interests)
+                    selected:
+                        true, // Custom interests are always selected (they're in _interests)
                     deleteIcon: const Icon(Icons.close, size: 18),
                     onSelected: (sel) {
                       // Deselecting removes the custom interest

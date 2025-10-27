@@ -44,9 +44,11 @@ class UserProfile {
   factory UserProfile.fromMap(Map<String, dynamic> m) {
     final uid = m['uid'];
     if (uid == null || uid is! String) {
-      throw ArgumentError('UserProfile.fromMap: uid field is required and must be a String, got: $uid');
+      throw ArgumentError(
+        'UserProfile.fromMap: uid field is required and must be a String, got: $uid',
+      );
     }
-    
+
     return UserProfile(
       uid: uid,
       displayName: m['displayName'] as String?,
@@ -55,8 +57,12 @@ class UserProfile {
       classYear: m['classYear'] as String?,
       major: m['major'] as String?,
       interests: (m['interests'] as List?)?.cast<String>() ?? const [],
-      createdAt: DateTime.fromMillisecondsSinceEpoch(m['createdAt'] as int? ?? 0),
-      updatedAt: DateTime.fromMillisecondsSinceEpoch(m['updatedAt'] as int? ?? 0),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(
+        m['createdAt'] as int? ?? 0,
+      ),
+      updatedAt: DateTime.fromMillisecondsSinceEpoch(
+        m['updatedAt'] as int? ?? 0,
+      ),
       location: m['location'] != null
           ? UserLocation.fromMap(m['location'] as Map<String, dynamic>)
           : null,
@@ -84,17 +90,18 @@ class UserLocation {
     'geohash': geohash,
     if (latitude != null) 'latitude': latitude,
     if (longitude != null) 'longitude': longitude,
-    if (lastUpdated != null)
-      'lastUpdated': lastUpdated!.millisecondsSinceEpoch,
+    if (lastUpdated != null) 'lastUpdated': lastUpdated!.millisecondsSinceEpoch,
     'isVisible': isVisible,
   };
 
   factory UserLocation.fromMap(Map<String, dynamic> m) {
     final geohash = m['geohash'];
     if (geohash == null || geohash is! String) {
-      throw ArgumentError('UserLocation.fromMap: geohash field is required and must be a String, got: $geohash');
+      throw ArgumentError(
+        'UserLocation.fromMap: geohash field is required and must be a String, got: $geohash',
+      );
     }
-    
+
     DateTime? lastUpdated;
     if (m['lastUpdated'] != null) {
       final lastUpdatedValue = m['lastUpdated'];

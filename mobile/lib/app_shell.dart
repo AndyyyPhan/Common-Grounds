@@ -46,10 +46,7 @@ class _AppShellState extends State<AppShell> {
         ];
 
         return Scaffold(
-          body: IndexedStack(
-            index: _currentIndex,
-            children: pages,
-          ),
+          body: IndexedStack(index: _currentIndex, children: pages),
           bottomNavigationBar: _BottomNav(
             currentIndex: _currentIndex,
             onTap: (index) => setState(() => _currentIndex = index),
@@ -123,7 +120,9 @@ class _BottomNav extends StatelessWidget {
                                   minHeight: 16,
                                 ),
                                 child: Text(
-                                  pendingWaves > 99 ? '99+' : pendingWaves.toString(),
+                                  pendingWaves > 99
+                                      ? '99+'
+                                      : pendingWaves.toString(),
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 10,
@@ -158,7 +157,9 @@ class _BottomNav extends StatelessWidget {
                                   minHeight: 16,
                                 ),
                                 child: Text(
-                                  totalUnread > 99 ? '99+' : totalUnread.toString(),
+                                  totalUnread > 99
+                                      ? '99+'
+                                      : totalUnread.toString(),
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 10,

@@ -76,10 +76,15 @@ firestore-debug.log
 # Local env & IDE
 *.env
 .env.*
-.vscode/*
-!.vscode/launch.json
-!.vscode/settings.json
+.vscode/
 local.properties
+
+# Claude Code local settings
+../.claude/settings.local.json
+
+# Documentation (optional - uncomment if you don't want to commit docs)
+*.md
+!README.md
 
 # Optional: if your org prefers not committing client configs
 # android/app/google-services.json

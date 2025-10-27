@@ -100,7 +100,10 @@ class ErrorMessage extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.error.withValues(alpha: 0.1),
         borderRadius: AppSpacing.borderRadiusSm,
-        border: Border.all(color: AppColors.error.withValues(alpha: 0.3), width: 1),
+        border: Border.all(
+          color: AppColors.error.withValues(alpha: 0.3),
+          width: 1,
+        ),
       ),
       child: Row(
         children: [

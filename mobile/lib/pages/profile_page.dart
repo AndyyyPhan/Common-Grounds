@@ -587,11 +587,20 @@ class _DebugInfo extends StatelessWidget {
             const SizedBox(height: 4),
             _DebugRow('Location Visible', '${location?.isVisible ?? false}'),
             _DebugRow('Geohash', location?.geohash ?? 'Not set'),
-            _DebugRow('Latitude', location?.latitude?.toStringAsFixed(6) ?? 'Not set'),
-            _DebugRow('Longitude', location?.longitude?.toStringAsFixed(6) ?? 'Not set'),
-            _DebugRow('Last Updated', location?.lastUpdated != null
-              ? _formatTimestamp(location!.lastUpdated!)
-              : 'Never'),
+            _DebugRow(
+              'Latitude',
+              location?.latitude?.toStringAsFixed(6) ?? 'Not set',
+            ),
+            _DebugRow(
+              'Longitude',
+              location?.longitude?.toStringAsFixed(6) ?? 'Not set',
+            ),
+            _DebugRow(
+              'Last Updated',
+              location?.lastUpdated != null
+                  ? _formatTimestamp(location!.lastUpdated!)
+                  : 'Never',
+            ),
             const SizedBox(height: 8),
             Text(
               'For proximity matching to work:\n'
@@ -649,10 +658,7 @@ class _DebugRow extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontSize: 11,
-                fontFamily: 'monospace',
-              ),
+              style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
             ),
           ),
         ],

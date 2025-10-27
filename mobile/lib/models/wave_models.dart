@@ -2,10 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 /// Status of a wave request
 enum WaveStatus {
-  pending,   // Wave sent, waiting for response
-  accepted,  // Wave accepted by receiver
-  declined,  // Wave declined by receiver
-  expired,   // Wave expired (after 48 hours)
+  pending, // Wave sent, waiting for response
+  accepted, // Wave accepted by receiver
+  declined, // Wave declined by receiver
+  expired, // Wave expired (after 48 hours)
 }
 
 /// Represents a wave request between two users
@@ -13,14 +13,14 @@ enum WaveStatus {
 /// When both users wave at each other (mutual wave), they can start messaging.
 class WaveRequest {
   final String id;
-  final String senderId;      // User who sent the wave
-  final String receiverId;    // User who received the wave
-  final DateTime timestamp;   // When the wave was sent
-  final WaveStatus status;    // Current status of the wave
+  final String senderId; // User who sent the wave
+  final String receiverId; // User who received the wave
+  final DateTime timestamp; // When the wave was sent
+  final WaveStatus status; // Current status of the wave
   final DateTime? respondedAt; // When the wave was accepted/declined
 
   // Metadata for display purposes
-  final Map<String, dynamic> senderProfile;   // {displayName, photoUrl}
+  final Map<String, dynamic> senderProfile; // {displayName, photoUrl}
   final Map<String, dynamic> receiverProfile; // {displayName, photoUrl}
 
   const WaveRequest({
@@ -119,8 +119,8 @@ class MutualMatch {
   final String user1Id;
   final String user2Id;
   final DateTime matchedAt;
-  final String wave1Id;  // Wave from user1 to user2
-  final String wave2Id;  // Wave from user2 to user1
+  final String wave1Id; // Wave from user1 to user2
+  final String wave2Id; // Wave from user2 to user1
 
   // Profiles for display
   final Map<String, dynamic> user1Profile;

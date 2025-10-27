@@ -25,10 +25,7 @@ import '../utils/chat_utils.dart';
 import 'profile_setup_page.dart';
 
 class HomePage extends StatelessWidget {
-  const HomePage({
-    super.key,
-    this.onNavigateToTab,
-  });
+  const HomePage({super.key, this.onNavigateToTab});
 
   /// Callback to navigate to a specific tab (0=Home, 1=Messages, 2=Profile)
   final void Function(int tabIndex)? onNavigateToTab;
@@ -50,9 +47,7 @@ class HomePage extends StatelessWidget {
             }
 
             if (snapshot.hasError) {
-              return Center(
-                child: Text('Error: ${snapshot.error}'),
-              );
+              return Center(child: Text('Error: ${snapshot.error}'));
             }
 
             final profile = snapshot.data;
@@ -113,8 +108,8 @@ class HomePage extends StatelessWidget {
     final greeting = hour < 12
         ? 'Good morning'
         : hour < 17
-            ? 'Good afternoon'
-            : 'Good evening';
+        ? 'Good afternoon'
+        : 'Good evening';
 
     return Row(
       children: [
@@ -131,10 +126,10 @@ class HomePage extends StatelessWidget {
               Text(
                 '$greeting,',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).brightness == Brightness.light
-                          ? AppColors.textSecondaryLight
-                          : AppColors.textSecondaryDark,
-                    ),
+                  color: Theme.of(context).brightness == Brightness.light
+                      ? AppColors.textSecondaryLight
+                      : AppColors.textSecondaryDark,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
@@ -148,7 +143,8 @@ class HomePage extends StatelessWidget {
                 Text(
                   [
                     if (profile.major != null) profile.major,
-                    if (profile.classYear != null) 'Class of ${profile.classYear}',
+                    if (profile.classYear != null)
+                      'Class of ${profile.classYear}',
                   ].join(' • '),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
@@ -207,10 +203,7 @@ class HomePage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Quick Actions',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Quick Actions', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: AppSpacing.sm),
         Row(
           children: [
@@ -235,7 +228,11 @@ class HomePage extends StatelessWidget {
 
                   if (context.mounted) {
                     messenger.showSnackBar(
-                      const SnackBar(content: Text('Location updated! Refreshing nearby students...')),
+                      const SnackBar(
+                        content: Text(
+                          'Location updated! Refreshing nearby students...',
+                        ),
+                      ),
                     );
                   }
                 },
@@ -285,10 +282,10 @@ class HomePage extends StatelessWidget {
                 Text(
                   'Auto-matched by interests',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).brightness == Brightness.light
-                            ? AppColors.textSecondaryLight
-                            : AppColors.textSecondaryDark,
-                      ),
+                    color: Theme.of(context).brightness == Brightness.light
+                        ? AppColors.textSecondaryLight
+                        : AppColors.textSecondaryDark,
+                  ),
                 ),
               ],
             ),
@@ -339,7 +336,9 @@ class HomePage extends StatelessWidget {
             stream: ProximityService.instance.watchNearbyMatches(profile),
             builder: (context, snapshot) {
               print('🏠 HOME PAGE: StreamBuilder triggered');
-              print('🏠 HOME PAGE: Connection state: ${snapshot.connectionState}');
+              print(
+                '🏠 HOME PAGE: Connection state: ${snapshot.connectionState}',
+              );
               print('🏠 HOME PAGE: Has data: ${snapshot.hasData}');
               print('🏠 HOME PAGE: Has error: ${snapshot.hasError}');
               if (snapshot.hasError) {
@@ -366,7 +365,7 @@ class HomePage extends StatelessWidget {
               }
 
               final matches = snapshot.data ?? [];
-              
+
               if (matches.isEmpty) {
                 return AppCard(
                   padding: AppSpacing.lg,
@@ -401,16 +400,29 @@ class HomePage extends StatelessWidget {
                       FilledButton.icon(
                         onPressed: () async {
                           final messenger = ScaffoldMessenger.of(context);
-                          print('🧪 TEST: Manually triggering proximity search');
-                          print('🧪 TEST: Current profile: ${profile.displayName}');
-                          print('🧪 TEST: Location visible: ${profile.location?.isVisible}');
-                          print('🧪 TEST: Location coords: ${profile.location?.latitude}, ${profile.location?.longitude}');
+                          print(
+                            '🧪 TEST: Manually triggering proximity search',
+                          );
+                          print(
+                            '🧪 TEST: Current profile: ${profile.displayName}',
+                          );
+                          print(
+                            '🧪 TEST: Location visible: ${profile.location?.isVisible}',
+                          );
+                          print(
+                            '🧪 TEST: Location coords: ${profile.location?.latitude}, ${profile.location?.longitude}',
+                          );
                           print('🧪 TEST: Interests: ${profile.interests}');
-                          final matches = await ProximityService.instance.refreshMatches(profile);
+                          final matches = await ProximityService.instance
+                              .refreshMatches(profile);
                           print('🧪 TEST: Found ${matches.length} matches');
                           if (context.mounted) {
                             messenger.showSnackBar(
-                              SnackBar(content: Text('Test: Found ${matches.length} matches')),
+                              SnackBar(
+                                content: Text(
+                                  'Test: Found ${matches.length} matches',
+                                ),
+                              ),
                             );
                           }
                         },
@@ -434,7 +446,11 @@ class HomePage extends StatelessWidget {
                       onPressed: () {
                         // TODO: Navigate to full matches list
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('${matches.length - 3} more matches available')),
+                          SnackBar(
+                            content: Text(
+                              '${matches.length - 3} more matches available',
+                            ),
+                          ),
                         );
                       },
                       child: Text('View ${matches.length - 3} more matches'),
@@ -531,10 +547,11 @@ class HomePage extends StatelessWidget {
                         ),
                         child: Text(
                           interest,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.primary,
-                            fontSize: 10,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: AppColors.primary,
+                                fontSize: 10,
+                              ),
                         ),
                       );
                     }).toList(),
@@ -545,14 +562,21 @@ class HomePage extends StatelessWidget {
 
             // Wave/Chat button - check mutual match status
             FutureBuilder<bool>(
-              future: WaveService.instance.checkMutualMatch(currentUser.uid, user.uid),
+              future: WaveService.instance.checkMutualMatch(
+                currentUser.uid,
+                user.uid,
+              ),
               builder: (context, snapshot) {
                 // Debug logging
                 if (snapshot.hasError) {
-                  debugPrint('❌ Error checking mutual match: ${snapshot.error}');
+                  debugPrint(
+                    '❌ Error checking mutual match: ${snapshot.error}',
+                  );
                 }
                 if (snapshot.hasData) {
-                  debugPrint('🔍 Mutual match check for ${user.displayName}: ${snapshot.data}');
+                  debugPrint(
+                    '🔍 Mutual match check for ${user.displayName}: ${snapshot.data}',
+                  );
                 }
 
                 final hasMutualMatch = snapshot.data ?? false;
@@ -570,11 +594,15 @@ class HomePage extends StatelessWidget {
                 } else {
                   // No mutual match yet - show wave button
                   return FutureBuilder<WaveRequest?>(
-                    future: WaveService.instance.getWaveTo(currentUser.uid, user.uid),
+                    future: WaveService.instance.getWaveTo(
+                      currentUser.uid,
+                      user.uid,
+                    ),
                     builder: (context, waveSnapshot) {
                       final existingWave = waveSnapshot.data;
 
-                      if (existingWave != null && existingWave.status == WaveStatus.pending) {
+                      if (existingWave != null &&
+                          existingWave.status == WaveStatus.pending) {
                         // Already waved - show pending state
                         return IconButton(
                           onPressed: null,
@@ -605,10 +633,16 @@ class HomePage extends StatelessWidget {
   }
 
   /// Handle sending a wave to another user
-  Future<void> _handleWave(BuildContext context, String currentUserId, UserProfile otherUser) async {
+  Future<void> _handleWave(
+    BuildContext context,
+    String currentUserId,
+    UserProfile otherUser,
+  ) async {
     try {
       // Get current user profile
-      final currentUserProfile = await ProfileService.instance.getProfile(currentUserId);
+      final currentUserProfile = await ProfileService.instance.getProfile(
+        currentUserId,
+      );
       if (currentUserProfile == null) {
         throw Exception('Could not load your profile');
       }
@@ -635,7 +669,9 @@ class HomePage extends StatelessWidget {
       if (waveId != null && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Wave sent to ${otherUser.displayName ?? "student"}!'),
+            content: Text(
+              'Wave sent to ${otherUser.displayName ?? "student"}!',
+            ),
             backgroundColor: AppColors.success,
             duration: const Duration(seconds: 2),
           ),
@@ -684,9 +720,9 @@ class HomePage extends StatelessWidget {
               children: [
                 Text(
                   'How it works',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppColors.info,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(color: AppColors.info),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -729,26 +765,26 @@ class _StatCard extends StatelessWidget {
           Text(
             value,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                ),
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           Text(
             label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w600),
             textAlign: TextAlign.center,
           ),
           if (sublabel != null)
             Text(
               sublabel!,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontSize: 10,
-                    color: Theme.of(context).brightness == Brightness.light
-                        ? AppColors.textSecondaryLight
-                        : AppColors.textSecondaryDark,
-                  ),
+                fontSize: 10,
+                color: Theme.of(context).brightness == Brightness.light
+                    ? AppColors.textSecondaryLight
+                    : AppColors.textSecondaryDark,
+              ),
               textAlign: TextAlign.center,
             ),
         ],
@@ -776,11 +812,7 @@ class _ActionButton extends StatelessWidget {
       padding: AppSpacing.md,
       child: Column(
         children: [
-          Icon(
-            icon,
-            color: AppColors.primary,
-            size: AppSpacing.iconLg,
-          ),
+          Icon(icon, color: AppColors.primary, size: AppSpacing.iconLg),
           const SizedBox(height: AppSpacing.xs),
           Text(
             label,
