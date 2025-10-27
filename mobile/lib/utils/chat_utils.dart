@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/chat_service.dart';
 import '../services/profile_service.dart';
+import '../services/wave_service.dart';
 import '../pages/chat_detail_page.dart';
 
 /// Utility class for chat-related operations
 class ChatUtils {
   /// Start a conversation with another user
   /// Opens the chat detail page after creating/finding the conversation
+  ///
+  /// IMPORTANT: Requires mutual wave (both users must have waved at each other)
   static Future<void> startConversationWith(
     BuildContext context,
     String otherUserId,
@@ -22,6 +25,26 @@ class ChatUtils {
         barrierDismissible: false,
         builder: (_) => const Center(child: CircularProgressIndicator()),
       );
+
+      // Check for mutual match first
+      final hasMutualMatch = await WaveService.instance.checkMutualMatch(
+        currentUser.uid,
+        otherUserId,
+      );
+
+      if (!hasMutualMatch) {
+        if (context.mounted) Navigator.of(context).pop();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('You need to wave at each other before messaging!'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
 
       // Get current user's profile
       final currentUserProfile = await ProfileService.instance.getProfile(
