@@ -1,0 +1,67 @@
+name: CI/CD Pipeline
+
+on:
+  # Run on pushes to any branch
+  push:
+    branches: ['**']
+  # Run on pull requests to main
+  pull_request:
+    branches: [main]
+
+jobs:
+  # Job 1: Analyze and test Flutter code
+  analyze-and-test:
+    name: Analyze & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Analyze code
+        run: flutter analyze
+
+      - name: Check formatting
+        run: dart format --set-exit-if-changed .
+
+      - name: Run tests
+        run: flutter test
+
+  # Job 2: Deploy Firestore rules (only on main branch)
+  deploy-firestore:
+    name: Deploy Firestore Rules & Indexes
+    runs-on: ubuntu-latest
+    needs: analyze-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    defaults:
+      run:
+        working-directory: mobile
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Deploy to Firebase
+        run: firebase deploy --only firestore --token "${{ secrets.FIREBASE_TOKEN }}"
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
