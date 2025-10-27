@@ -66,6 +66,13 @@ android/app/upload-keystore.jks
 # Firebase Admin creds (server only)
 **/serviceAccountKey.json
 
+# Firebase local cache and debug files
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+ui-debug.log
+firestore-debug.log
+
 # Local env & IDE
 *.env
 .env.*
