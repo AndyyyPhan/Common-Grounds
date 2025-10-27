@@ -73,7 +73,7 @@ class HomePage extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xl),
 
                   // Quick stats
-                  _buildQuickStats(context),
+                  _buildQuickStats(context, profile),
                   const SizedBox(height: AppSpacing.xl),
 
                   // Quick actions
@@ -150,7 +150,7 @@ class HomePage extends StatelessWidget {
   }
 
   /// Quick stats cards - Shows discovery insights
-  Widget _buildQuickStats(BuildContext context) {
+  Widget _buildQuickStats(BuildContext context, UserProfile profile) {
     // TODO: Get real stats from Firestore
     // - Nearby: Count of students within proximity (e.g., 1km radius)
     // - Common Interests: Number of students with matching interests
@@ -169,12 +169,18 @@ class HomePage extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
-          child: _StatCard(
-            icon: Icons.interests_outlined,
-            label: 'Matches',
-            value: '5', // Students with common interests nearby
-            sublabel: 'similar',
-            color: AppColors.secondary,
+          child: FutureBuilder<int>(
+            future: ProximityService.instance.getMatchCount(profile),
+            builder: (context, snapshot) {
+              final matchCount = snapshot.data ?? 0;
+              return _StatCard(
+                icon: Icons.interests_outlined,
+                label: 'Matches',
+                value: matchCount.toString(),
+                sublabel: 'similar',
+                color: AppColors.secondary,
+              );
+            },
           ),
         ),
         const SizedBox(width: AppSpacing.sm),

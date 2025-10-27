@@ -400,6 +400,143 @@ class ProximityService {
       limit: limit,
     );
   }
+
+  /// Get total count of matches without limit restriction
+  /// This is useful for displaying stats like "5 similar" matches
+  Future<int> getMatchCount(
+    UserProfile currentUserProfile, {
+    double maxDistanceKm = 5.0,
+    int minCommonInterests = 1,
+  }) async {
+    try {
+      // Check if user has location and interests
+      if (currentUserProfile.location?.isVisible != true) {
+        return 0;
+      }
+
+      if (currentUserProfile.interests.isEmpty) {
+        return 0;
+      }
+
+      final currentGeohash = currentUserProfile.location!.geohash;
+      final currentLat = currentUserProfile.location!.latitude;
+      final currentLng = currentUserProfile.location!.longitude;
+
+      if (currentLat == null || currentLng == null) {
+        return 0;
+      }
+
+      // Get nearby geohashes (expanded search area)
+      final nearbyGeohashes = _getNearbyGeohashes(currentGeohash, maxDistanceKm);
+
+      // Use array-contains-any for efficient multi-geohash search
+      final query = await _db
+          .collection('users')
+          .where('location.geohash', whereIn: nearbyGeohashes)
+          .where('location.isVisible', isEqualTo: true)
+          .limit(100) // Get more users for filtering
+          .get();
+
+      // Pre-compute current user's interest set for O(1) lookups
+      final currentInterestsSet = currentUserProfile.interests.toSet();
+      int matchCount = 0;
+
+      for (final doc in query.docs) {
+        // Skip current user
+        if (doc.id == currentUserProfile.uid) continue;
+
+        try {
+          final userProfile = UserProfile.fromMap(doc.data());
+          
+          // Check if user has location coordinates
+          if (userProfile.location?.latitude == null || 
+              userProfile.location?.longitude == null) {
+            continue;
+          }
+
+          // Calculate distance
+          final distance = _calculateDistance(
+            currentLat,
+            currentLng,
+            userProfile.location!.latitude!,
+            userProfile.location!.longitude!,
+          );
+
+          // Filter by distance
+          if (distance > maxDistanceKm) continue;
+
+          // OPTIMIZED: Fast interest matching using sets
+          final commonInterests = _getCommonInterestsOptimized(
+            currentInterestsSet,
+            userProfile.interests,
+          );
+
+          // Filter by minimum common interests
+          if (commonInterests.length >= minCommonInterests) {
+            matchCount++;
+          }
+        } catch (e) {
+          debugPrint('Error parsing user profile ${doc.id}: $e');
+          continue;
+        }
+      }
+
+      // If no matches found with geohash, try a broader search
+      if (matchCount == 0) {
+        final query = await _db
+            .collection('users')
+            .where('location.isVisible', isEqualTo: true)
+            .limit(50) // Get more users for broader search
+            .get();
+
+        for (final doc in query.docs) {
+          // Skip current user
+          if (doc.id == currentUserProfile.uid) continue;
+
+          try {
+            final userProfile = UserProfile.fromMap(doc.data());
+            
+            // Check if user has location coordinates
+            if (userProfile.location?.latitude == null || 
+                userProfile.location?.longitude == null) {
+              continue;
+            }
+
+            // Calculate distance
+            final distance = _calculateDistance(
+              currentLat,
+              currentLng,
+              userProfile.location!.latitude!,
+              userProfile.location!.longitude!,
+            );
+
+            // Filter by distance (more lenient for broad search)
+            if (distance > maxDistanceKm * 2) continue;
+
+            // OPTIMIZED: Fast interest matching using sets
+            final commonInterests = _getCommonInterestsOptimized(
+              currentInterestsSet,
+              userProfile.interests,
+            );
+
+            // Filter by minimum common interests
+            if (commonInterests.length >= minCommonInterests) {
+              matchCount++;
+            }
+          } catch (e) {
+            debugPrint('Error parsing user profile ${doc.id}: $e');
+            continue;
+          }
+        }
+      }
+
+      debugPrint('📊 Total match count: $matchCount');
+      return matchCount;
+    } catch (e) {
+      debugPrint('Error getting match count: $e');
+      return 0;
+    }
+  }
 }
 
 /// Represents a proximity match with another user
