@@ -64,6 +64,7 @@ class UserProfile {
   }
 }
 
+/// Represents a user's location with privacy-preserving geohash
 class UserLocation {
   final String geohash;
   final double? latitude;

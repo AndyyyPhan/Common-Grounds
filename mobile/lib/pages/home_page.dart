@@ -18,7 +18,9 @@ import '../core/widgets/loading_indicator.dart';
 import '../services/profile_service.dart';
 import '../services/proximity_service.dart';
 import '../services/location_service.dart';
+import '../services/wave_service.dart';
 import '../models/user_profile.dart';
+import '../models/wave_models.dart';
 import '../utils/chat_utils.dart';
 import 'profile_setup_page.dart';
 
@@ -60,8 +62,17 @@ class HomePage extends StatelessWidget {
 
             return RefreshIndicator(
               onRefresh: () async {
-                // Refresh profile data
-                await Future.delayed(const Duration(seconds: 1));
+                // Clear proximity cache to force fresh data
+                ProximityService.instance.clearCache();
+
+                // Refresh location in Firestore
+                await LocationService.instance.refreshLocation();
+
+                // Wait for Firestore to propagate
+                await Future.delayed(const Duration(milliseconds: 500));
+
+                // Refresh matches
+                await ProximityService.instance.refreshMatches(profile);
               },
               child: ListView(
                 padding: AppSpacing.screenPadding,
@@ -214,12 +225,25 @@ class HomePage extends StatelessWidget {
                 icon: Icons.my_location,
                 label: 'Refresh Location',
                 onTap: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+
+                  // Clear ALL caches first
+                  ProximityService.instance.clearCache();
+
+                  // Update location in Firestore
                   await LocationService.instance.refreshLocation();
-                  // Force refresh matches after location update
+
+                  // Wait a moment for Firestore to propagate
+                  await Future.delayed(const Duration(milliseconds: 500));
+
+                  // Force refresh matches with cleared cache
                   await ProximityService.instance.refreshMatches(profile);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Location updated! Refreshing nearby students...')),
-                  );
+
+                  if (context.mounted) {
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Location updated! Refreshing nearby students...')),
+                    );
+                  }
                 },
               ),
             ),
@@ -382,6 +406,7 @@ class HomePage extends StatelessWidget {
                       const SizedBox(height: AppSpacing.sm),
                       FilledButton.icon(
                         onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
                           print('🧪 TEST: Manually triggering proximity search');
                           print('🧪 TEST: Current profile: ${profile.displayName}');
                           print('🧪 TEST: Location visible: ${profile.location?.isVisible}');
@@ -389,9 +414,11 @@ class HomePage extends StatelessWidget {
                           print('🧪 TEST: Interests: ${profile.interests}');
                           final matches = await ProximityService.instance.refreshMatches(profile);
                           print('🧪 TEST: Found ${matches.length} matches');
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Test: Found ${matches.length} matches')),
-                          );
+                          if (context.mounted) {
+                            messenger.showSnackBar(
+                              SnackBar(content: Text('Test: Found ${matches.length} matches')),
+                            );
+                          }
                         },
                         icon: const Icon(Icons.bug_report),
                         label: const Text('Test Search'),
@@ -429,113 +456,214 @@ class HomePage extends StatelessWidget {
   /// Build a match card for displaying a proximity match
   Widget _buildMatchCard(BuildContext context, ProximityMatch match) {
     final user = match.userProfile;
-    
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null) {
+      return const SizedBox.shrink();
+    }
+
     return AppCard(
-      child: InkWell(
-        onTap: () async {
-          // Start conversation with this user
-          await ChatUtils.startConversationWith(context, user.uid);
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(
-            children: [
-              // Avatar
-              CircleAvatar(
-                radius: 24,
-                backgroundImage: user.photoUrl != null 
-                    ? NetworkImage(user.photoUrl!) 
-                    : null,
-                child: user.photoUrl == null 
-                    ? const Icon(Icons.person, size: 24)
-                    : null,
-              ),
-              const SizedBox(width: AppSpacing.md),
-              
-              // User info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      user.displayName ?? 'Student',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Row(
+          children: [
+            // Avatar
+            CircleAvatar(
+              radius: 24,
+              backgroundImage: user.photoUrl != null
+                  ? NetworkImage(user.photoUrl!)
+                  : null,
+              child: user.photoUrl == null
+                  ? const Icon(Icons.person, size: 24)
+                  : null,
+            ),
+            const SizedBox(width: AppSpacing.md),
+
+            // User info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user.displayName ?? 'Student',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on,
+                        size: 12,
+                        color: AppColors.textSecondaryLight,
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          size: 12,
+                      const SizedBox(width: 4),
+                      Text(
+                        match.formattedDistance,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppColors.textSecondaryLight,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          match.formattedDistance,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondaryLight,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.favorite,
-                          size: 12,
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.favorite,
+                        size: 12,
+                        color: AppColors.textSecondaryLight,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${match.matchPercentage}% match',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: AppColors.textSecondaryLight,
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${match.matchPercentage}% match',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  // Common interests
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 2,
+                    children: match.commonInterests.take(3).map((interest) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          interest,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondaryLight,
+                            color: AppColors.primary,
+                            fontSize: 10,
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    // Common interests
-                    Wrap(
-                      spacing: 4,
-                      runSpacing: 2,
-                      children: match.commonInterests.take(3).map((interest) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            interest,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.primary,
-                              fontSize: 10,
-                            ),
-                          ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+
+            // Wave/Chat button - check mutual match status
+            FutureBuilder<bool>(
+              future: WaveService.instance.checkMutualMatch(currentUser.uid, user.uid),
+              builder: (context, snapshot) {
+                // Debug logging
+                if (snapshot.hasError) {
+                  debugPrint('❌ Error checking mutual match: ${snapshot.error}');
+                }
+                if (snapshot.hasData) {
+                  debugPrint('🔍 Mutual match check for ${user.displayName}: ${snapshot.data}');
+                }
+
+                final hasMutualMatch = snapshot.data ?? false;
+
+                if (hasMutualMatch) {
+                  // Both waved - show chat button
+                  return IconButton(
+                    onPressed: () async {
+                      await ChatUtils.startConversationWith(context, user.uid);
+                    },
+                    icon: const Icon(Icons.chat_bubble),
+                    tooltip: 'Start conversation',
+                    color: AppColors.primary,
+                  );
+                } else {
+                  // No mutual match yet - show wave button
+                  return FutureBuilder<WaveRequest?>(
+                    future: WaveService.instance.getWaveTo(currentUser.uid, user.uid),
+                    builder: (context, waveSnapshot) {
+                      final existingWave = waveSnapshot.data;
+
+                      if (existingWave != null && existingWave.status == WaveStatus.pending) {
+                        // Already waved - show pending state
+                        return IconButton(
+                          onPressed: null,
+                          icon: const Icon(Icons.back_hand),
+                          tooltip: 'Wave sent',
+                          color: AppColors.textSecondaryLight,
                         );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // Chat button
-              IconButton(
-                onPressed: () async {
-                  await ChatUtils.startConversationWith(context, user.uid);
-                },
-                icon: const Icon(Icons.chat_bubble_outline),
-                tooltip: 'Start conversation',
-              ),
-            ],
-          ),
+                      } else {
+                        // Can wave - show wave button
+                        return IconButton(
+                          onPressed: () async {
+                            await _handleWave(context, currentUser.uid, user);
+                          },
+                          icon: const Icon(Icons.back_hand_outlined),
+                          tooltip: 'Wave to connect',
+                          color: AppColors.primary,
+                        );
+                      }
+                    },
+                  );
+                }
+              },
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  /// Handle sending a wave to another user
+  Future<void> _handleWave(BuildContext context, String currentUserId, UserProfile otherUser) async {
+    try {
+      // Get current user profile
+      final currentUserProfile = await ProfileService.instance.getProfile(currentUserId);
+      if (currentUserProfile == null) {
+        throw Exception('Could not load your profile');
+      }
+
+      // Create profile maps
+      final currentUserProfileMap = {
+        'displayName': currentUserProfile.displayName,
+        'photoUrl': currentUserProfile.photoUrl,
+      };
+
+      final otherUserProfileMap = {
+        'displayName': otherUser.displayName,
+        'photoUrl': otherUser.photoUrl,
+      };
+
+      // Send wave
+      final waveId = await WaveService.instance.sendWave(
+        senderId: currentUserId,
+        receiverId: otherUser.uid,
+        senderProfile: currentUserProfileMap,
+        receiverProfile: otherUserProfileMap,
+      );
+
+      if (waveId != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Wave sent to ${otherUser.displayName ?? "student"}!'),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You already waved at this person'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send wave: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   /// Tips card - Helpful hints about how the app works

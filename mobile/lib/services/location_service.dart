@@ -84,10 +84,9 @@ class LocationService {
       );
 
       // Convert to GeoFirePoint
-      final geoPoint = GeoFirePoint(GeoPoint(
-        position.latitude,
-        position.longitude,
-      ));
+      final geoPoint = GeoFirePoint(
+        GeoPoint(position.latitude, position.longitude),
+      );
 
       // Get geohash with specified precision (coarse for privacy)
       final geohash = geoPoint.geohash.substring(0, _geohashPrecision);
@@ -105,12 +104,14 @@ class LocationService {
       }, SetOptions(merge: true));
 
       if (kDebugMode) {
-        debugPrint('Location updated: ${position.latitude}, ${position.longitude}');
-        debugPrint('Geohash: $geohash');
+        debugPrint(
+          '📍 Location updated: ${position.latitude}, ${position.longitude}',
+        );
+        debugPrint('📍 Geohash: $geohash');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('Error updating location: $e');
+        debugPrint('❌ Error updating location: $e');
       }
     }
   }
@@ -127,7 +128,9 @@ class LocationService {
     );
 
     if (kDebugMode) {
-      debugPrint('Location tracking started (updates every $_updateIntervalMinutes minutes)');
+      debugPrint(
+        'Location tracking started (updates every $_updateIntervalMinutes minutes)',
+      );
     }
   }
 
