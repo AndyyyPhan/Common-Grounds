@@ -45,9 +45,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: analyze-and-test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    defaults:
-      run:
-        working-directory: mobile
 
     steps:
       - name: Checkout code
@@ -62,13 +59,14 @@ jobs:
         run: npm install -g firebase-tools
 
       - name: Create service account key file
-        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > $GITHUB_WORKSPACE/gcloud-service-key.json
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > /tmp/gcloud-service-key.json
 
       - name: Deploy to Firebase
+        working-directory: mobile
         run: firebase deploy --only firestore
         env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcloud-service-key.json
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/gcloud-service-key.json
 
       - name: Cleanup service account key
         if: always()
-        run: rm -f $GITHUB_WORKSPACE/gcloud-service-key.json
+        run: rm -f /tmp/gcloud-service-key.json
