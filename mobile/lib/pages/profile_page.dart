@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import '../models/user_profile.dart';
 import '../services/profile_service.dart';
 import '../services/location_service.dart';
+import '../services/auth_service.dart';
 import 'profile_setup_page.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -160,6 +161,51 @@ class ProfilePage extends StatelessWidget {
                 const Divider(),
                 const SizedBox(height: 16),
                 _LocationSettings(profile: profile),
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
+                // Debug info for proximity matching
+                _DebugInfo(profile: profile),
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
+                // Logout button
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    // Show confirmation dialog
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Sign out'),
+                        content: const Text(
+                          'Are you sure you want to sign out?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(true),
+                            child: const Text('Sign out'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirm == true) {
+                      await AuthService.instance.signOut();
+                      // Navigation will be handled automatically by auth state listener
+                    }
+                  },
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Sign Out'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                  ),
+                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -192,12 +238,13 @@ class _LocationSettingsState extends State<_LocationSettings> {
     setState(() => _isLoadingCoordinates = true);
     try {
       // Check permission first
-      final hasPermission = await LocationService.instance.hasLocationPermission();
+      final hasPermission = await LocationService.instance
+          .hasLocationPermission();
       print('DEBUG: Has location permission: $hasPermission');
-      
+
       final position = await LocationService.instance.getCurrentCoordinates();
       print('DEBUG: Got position: $position');
-      
+
       if (mounted) {
         setState(() {
           _currentPosition = position;
@@ -273,15 +320,13 @@ class _LocationSettingsState extends State<_LocationSettings> {
                               try {
                                 await LocationService.instance
                                     .setLocationVisibility(
-                                  widget.profile.uid,
-                                  value,
-                                );
+                                      widget.profile.uid,
+                                      value,
+                                    );
                                 if (mounted && value) {
                                   messenger.showSnackBar(
                                     const SnackBar(
-                                      content: Text(
-                                        'Location sharing enabled',
-                                      ),
+                                      content: Text('Location sharing enabled'),
                                       duration: Duration(seconds: 2),
                                     ),
                                   );
@@ -310,14 +355,15 @@ class _LocationSettingsState extends State<_LocationSettings> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
+                      Icon(
+                        Icons.access_time,
+                        size: 14,
+                        color: Colors.grey[600],
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'Last updated: ${_formatTimestamp(lastUpdated)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -388,7 +434,9 @@ class _LocationSettingsState extends State<_LocationSettings> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.refresh, size: 16),
-                      onPressed: _isLoadingCoordinates ? null : _loadCurrentCoordinates,
+                      onPressed: _isLoadingCoordinates
+                          ? null
+                          : _loadCurrentCoordinates,
                       tooltip: 'Refresh coordinates',
                     ),
                   ],
@@ -489,6 +537,124 @@ class _KV extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Expanded(child: Text(value!)),
+        ],
+      ),
+    );
+  }
+}
+
+class _DebugInfo extends StatelessWidget {
+  final UserProfile profile;
+  const _DebugInfo({required this.profile});
+
+  @override
+  Widget build(BuildContext context) {
+    final location = profile.location;
+
+    return Card(
+      color: Colors.blue[50],
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.bug_report, size: 20, color: Colors.blue),
+                const SizedBox(width: 8),
+                const Text(
+                  'Debug Info (Proximity Matching)',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.blue,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 8),
+            _DebugRow('User ID', profile.uid),
+            _DebugRow('Display Name', profile.displayName ?? 'Not set'),
+            _DebugRow('Interests Count', '${profile.interests.length}'),
+            _DebugRow('Interests', profile.interests.join(', ')),
+            const SizedBox(height: 8),
+            const Text(
+              'Location Data:',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+            ),
+            const SizedBox(height: 4),
+            _DebugRow('Location Visible', '${location?.isVisible ?? false}'),
+            _DebugRow('Geohash', location?.geohash ?? 'Not set'),
+            _DebugRow('Latitude', location?.latitude?.toStringAsFixed(6) ?? 'Not set'),
+            _DebugRow('Longitude', location?.longitude?.toStringAsFixed(6) ?? 'Not set'),
+            _DebugRow('Last Updated', location?.lastUpdated != null
+              ? _formatTimestamp(location!.lastUpdated!)
+              : 'Never'),
+            const SizedBox(height: 8),
+            Text(
+              'For proximity matching to work:\n'
+              '• Location must be visible (toggle ON above)\n'
+              '• At least 1 interest must be set\n'
+              '• Both users must share at least 1 common interest\n'
+              '• Both users must be within ~5km of each other',
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.grey[700],
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatTimestamp(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
+  }
+}
+
+class _DebugRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _DebugRow(this.label, this.value);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[700],
+                fontFamily: 'monospace',
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 11,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ),
         ],
       ),
     );
