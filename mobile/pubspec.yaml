@@ -48,6 +48,7 @@ dependencies:
   geolocator: ^14.0.2
   permission_handler: ^12.0.1
   geoflutterfire_plus: ^0.0.4
+  google_maps_flutter: ^2.5.0
 
   # UI & Animations
   animations: ^2.0.11

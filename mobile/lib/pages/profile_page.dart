@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/user_profile.dart';
 import '../services/profile_service.dart';
 import '../services/location_service.dart';
 import '../services/auth_service.dart';
+import '../widgets/location_picker_page.dart';
 import 'profile_setup_page.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -235,21 +237,74 @@ class _LocationSettingsState extends State<_LocationSettings> {
   }
 
   Future<void> _loadCurrentCoordinates() async {
+    if (kDebugMode) {
+      debugPrint('👤 ===== LOAD CURRENT COORDINATES STARTED =====');
+    }
+    
     setState(() => _isLoadingCoordinates = true);
     try {
-      // Check permission first
-      final hasPermission = await LocationService.instance
-          .hasLocationPermission();
-      print('DEBUG: Has location permission: $hasPermission');
+      // Get the saved location from the profile instead of GPS coordinates
+      final location = widget.profile.location;
+      
+      if (kDebugMode) {
+        debugPrint('👤 📍 Profile location data:');
+        debugPrint('👤   - Latitude: ${location?.latitude}');
+        debugPrint('👤   - Longitude: ${location?.longitude}');
+        debugPrint('👤   - Last Updated: ${location?.lastUpdated}');
+        debugPrint('👤   - Is Visible: ${location?.isVisible}');
+      }
+      
+      if (location?.latitude != null && location?.longitude != null) {
+        if (kDebugMode) {
+          debugPrint('👤 ✅ Found saved location coordinates, using those');
+        }
+        // Create a Position object from the saved coordinates
+        final position = Position(
+          latitude: location!.latitude!,
+          longitude: location.longitude!,
+          timestamp: location.lastUpdated ?? DateTime.now(),
+          accuracy: 10.0,
+          altitude: 0.0,
+          altitudeAccuracy: 0.0,
+          heading: 0.0,
+          headingAccuracy: 0.0,
+          speed: 0.0,
+          speedAccuracy: 0.0,
+        );
+        
+        if (kDebugMode) {
+          debugPrint('👤 ✅ Created Position from saved coordinates: ${position.latitude}, ${position.longitude}');
+        }
+        
+        if (mounted) {
+          setState(() {
+            _currentPosition = position;
+            _isLoadingCoordinates = false;
+          });
+        }
+      } else {
+        if (kDebugMode) {
+          debugPrint('👤 ⚠️ No saved location found, falling back to GPS coordinates');
+        }
+        // Fallback to GPS coordinates if no saved location
+        final hasPermission = await LocationService.instance
+            .hasLocationPermission();
+        print('DEBUG: Has location permission: $hasPermission');
 
-      final position = await LocationService.instance.getCurrentCoordinates();
-      print('DEBUG: Got position: $position');
+        final position = await LocationService.instance.getCurrentCoordinates();
+        print('DEBUG: Got position: $position');
 
-      if (mounted) {
-        setState(() {
-          _currentPosition = position;
-          _isLoadingCoordinates = false;
-        });
+        if (mounted) {
+          setState(() {
+            _currentPosition = position;
+            _isLoadingCoordinates = false;
+          });
+        }
+      }
+      
+      if (kDebugMode) {
+        debugPrint('👤 📱 Final position set: ${_currentPosition?.latitude}, ${_currentPosition?.longitude}');
+        debugPrint('👤 ===== LOAD CURRENT COORDINATES COMPLETED =====');
       }
     } catch (e) {
       print('DEBUG: Error getting coordinates: $e');
@@ -443,33 +498,74 @@ class _LocationSettingsState extends State<_LocationSettings> {
                 ),
                 if (isVisible) ...[
                   const SizedBox(height: 8),
-                  TextButton.icon(
-                    onPressed: () async {
-                      // Capture ScaffoldMessenger before async gap
-                      final messenger = ScaffoldMessenger.of(context);
-                      try {
-                        await LocationService.instance.refreshLocation();
-                        if (mounted) {
-                          messenger.showSnackBar(
-                            const SnackBar(
-                              content: Text('Location refreshed'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                      } catch (e) {
-                        if (mounted) {
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text('Error refreshing: $e'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    icon: const Icon(Icons.refresh, size: 16),
-                    label: const Text('Refresh now'),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton.icon(
+                          onPressed: () async {
+                            // Capture ScaffoldMessenger before async gap
+                            final messenger = ScaffoldMessenger.of(context);
+                            try {
+                              await LocationService.instance.refreshLocation();
+                              if (mounted) {
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Location refreshed'),
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error refreshing: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.refresh, size: 16),
+                          label: const Text('Refresh'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            // Navigate to map picker
+                            final result = await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => LocationPickerPage(
+                                  initialLatitude: location?.latitude,
+                                  initialLongitude: location?.longitude,
+                                  initialAddress: 'Current location',
+                                ),
+                              ),
+                            );
+                            
+                            // Refresh the page after returning from map picker
+                            if (result != null && mounted) {
+                              if (kDebugMode) {
+                                debugPrint('👤 🔄 Location picker returned with result: $result');
+                                debugPrint('👤 🔄 Reloading coordinates...');
+                              }
+                              // Reload coordinates to show the updated location
+                              await _loadCurrentCoordinates();
+                            } else if (kDebugMode) {
+                              debugPrint('👤 ⚠️ Location picker returned with no result or widget not mounted');
+                            }
+                          },
+                          icon: const Icon(Icons.map, size: 16),
+                          label: const Text('Choose on Map'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ],
