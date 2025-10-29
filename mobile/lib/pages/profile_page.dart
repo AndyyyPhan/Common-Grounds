@@ -506,11 +506,16 @@ class _LocationSettingsState extends State<_LocationSettings> {
                             // Capture ScaffoldMessenger before async gap
                             final messenger = ScaffoldMessenger.of(context);
                             try {
-                              await LocationService.instance.refreshLocation();
+                              // Force-fetch latest location from Firestore server (read-only)
+                              await FirebaseFirestore.instance
+                                  .doc('users/${widget.profile.uid}')
+                                  .get(const GetOptions(source: Source.server));
+                              // Reload coordinates display from profile
                               if (mounted) {
+                                await _loadCurrentCoordinates();
                                 messenger.showSnackBar(
                                   const SnackBar(
-                                    content: Text('Location refreshed'),
+                                    content: Text('Location reloaded from server'),
                                     duration: Duration(seconds: 2),
                                   ),
                                 );
@@ -519,7 +524,7 @@ class _LocationSettingsState extends State<_LocationSettings> {
                               if (mounted) {
                                 messenger.showSnackBar(
                                   SnackBar(
-                                    content: Text('Error refreshing: $e'),
+                                    content: Text('Error reloading: $e'),
                                     backgroundColor: Colors.red,
                                   ),
                                 );

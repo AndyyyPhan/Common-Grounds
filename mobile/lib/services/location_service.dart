@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:geoflutterfire_plus/geoflutterfire_plus.dart';
+import 'package:mobile/services/proximity_service.dart';
 
 class LocationService {
   LocationService._();
@@ -12,6 +13,10 @@ class LocationService {
   final _db = FirebaseFirestore.instance;
   Timer? _locationTimer;
   String? _currentUserId;
+  
+  // When true, do not auto-update location from GPS/debug.
+  // This is set when the user manually selects a location on the map.
+  bool _manualOverrideActive = false;
 
   // Update interval in minutes (coarse tracking for privacy)
   static const _updateIntervalMinutes = 5;
@@ -20,10 +25,16 @@ class LocationService {
   // Precision 6 = ~1.2km x 0.6km area
   static const _geohashPrecision = 6;
 
-  // Debug mode location override for testing
-  static const bool _debugMode = kDebugMode;
+  // Debug location override (disabled by default). Enable only if explicitly set.
+  static bool _useDebugOverride = false;
   static const double _debugLatitude = 38.03199384346889;
   static const double _debugLongitude = -78.51068317176542;
+
+  /// Enable or disable using the hardcoded debug coordinates.
+  /// This remains OFF by default to prevent unexpected overwrites.
+  void setUseDebugLocationOverride(bool enabled) {
+    _useDebugOverride = enabled;
+  }
 
   /// Initialize location tracking for a user
   Future<bool> initForUser(String uid) async {
@@ -38,7 +49,32 @@ class LocationService {
       return false;
     }
 
-    // Check if location services are enabled
+    // Load existing profile location. If present, treat it as authoritative and
+    // skip auto-updates (manual override). If absent, fall back to device.
+    try {
+      final snap = await _db.collection('users').doc(uid).get();
+      final data = snap.data();
+      final location = (data?['location'] as Map<String, dynamic>?) ?? {};
+      final hasSavedLat = location['latitude'] != null;
+      final hasSavedLng = location['longitude'] != null;
+
+      if (hasSavedLat && hasSavedLng) {
+        // Respect the saved profile location as source of truth
+        _manualOverrideActive = true;
+        stopTracking();
+        if (kDebugMode) {
+          debugPrint('🔒 Found saved profile location — using manual override');
+        }
+        return true;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('⚠️ Error reading saved location: $e');
+      }
+    }
+
+    // If no saved coordinates, ensure location services are enabled and start
+    // auto updates from device (coarse accuracy)
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       if (kDebugMode) {
@@ -47,10 +83,7 @@ class LocationService {
       return false;
     }
 
-    // Update location immediately
     await _updateUserLocation();
-
-    // Start periodic updates
     startTracking();
 
     return true;
@@ -79,10 +112,18 @@ class LocationService {
   Future<void> _updateUserLocation() async {
     if (_currentUserId == null) return;
 
+    // Respect manual override: do not overwrite user-selected location
+    if (_manualOverrideActive) {
+      if (kDebugMode) {
+        debugPrint('🔒 Manual override active — skipping auto location update');
+      }
+      return;
+    }
+
     try {
       Position position;
       
-      if (_debugMode) {
+      if (_useDebugOverride) {
         // Use debug coordinates for testing
         position = Position(
           latitude: _debugLatitude,
@@ -263,6 +304,18 @@ class LocationService {
         },
       }, SetOptions(merge: true));
 
+      // Activate manual override to prevent auto-updates from overwriting
+      _manualOverrideActive = true;
+      // Stop periodic GPS/debug updates while manual override is active
+      stopTracking();
+
+      // Invalidate proximity cache so Home reflects the new location immediately
+      try {
+        ProximityService.instance.clearCache();
+      } catch (_) {
+        // Safe to ignore cache clear failures
+      }
+
       if (kDebugMode) {
         debugPrint('🔧 ✅ Firestore write completed successfully');
         debugPrint('🔧 📍 Final coordinates saved: $latitude, $longitude');
@@ -283,7 +336,7 @@ class LocationService {
   /// Get current coordinates
   Future<Position?> getCurrentCoordinates() async {
     try {
-      if (_debugMode) {
+      if (_useDebugOverride) {
         // Return debug coordinates for testing
         return Position(
           latitude: _debugLatitude,

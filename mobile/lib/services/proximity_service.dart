@@ -263,10 +263,13 @@ class ProximityService {
     final neighbors = _getGeohashNeighbors(baseGeohash);
     geohashes.addAll(neighbors);
 
+    // Limit to 10 geohashes (Firestore whereIn limit)
+    final limitedGeohashes = geohashes.take(10).toList();
+
     debugPrint(
-      '🔍 Generated ${geohashes.length} optimized geohashes for search',
+      '🔍 Generated ${limitedGeohashes.length} optimized geohashes for search (limited to 10 for Firestore)',
     );
-    return geohashes.toList();
+    return limitedGeohashes;
   }
 
   /// Get the 8 neighboring geohashes

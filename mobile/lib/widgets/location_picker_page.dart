@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/location_service.dart';
 
 class LocationPickerPage extends StatefulWidget {
@@ -31,8 +33,48 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     // Set initial location if provided, otherwise use default
     _selectedLocation = widget.initialLatitude != null && widget.initialLongitude != null
         ? LatLng(widget.initialLatitude!, widget.initialLongitude!)
-        : const LatLng(38.03199384346889, -78.51068317176542); // Default to your location
+        : null;
     _selectedAddress = widget.initialAddress;
+
+    // If no initial coordinates were provided, load from user's saved profile
+    if (_selectedLocation == null) {
+      _loadSavedProfileLocation();
+    }
+    // As an absolute fallback, use a neutral default only if nothing loads
+    _selectedLocation ??= const LatLng(38.03199384346889, -78.51068317176542);
+  }
+
+  Future<void> _loadSavedProfileLocation() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get(const GetOptions(source: Source.server));
+      final data = snap.data();
+      final location = (data?['location'] as Map<String, dynamic>?) ?? {};
+      final lat = location['latitude'] as num?;
+      final lng = location['longitude'] as num?;
+      if (lat != null && lng != null) {
+        final latLng = LatLng(lat.toDouble(), lng.toDouble());
+        if (mounted) {
+          setState(() {
+            _selectedLocation = latLng;
+          });
+          // Recenter map if already created
+          _mapController?.animateCamera(
+            CameraUpdate.newCameraPosition(
+              CameraPosition(target: latLng, zoom: 15.0),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('🗺️ Error loading saved profile location: $e');
+      }
+    }
   }
 
   @override
