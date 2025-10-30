@@ -32,11 +32,24 @@ class WavesPage extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Waves'),
-          bottom: const TabBar(
+          bottom: TabBar(
+            isScrollable: true,
             tabs: [
-              Tab(text: 'Received', icon: Icon(Icons.inbox)),
-              Tab(text: 'Sent', icon: Icon(Icons.send)),
-              Tab(text: 'Matched', icon: Icon(Icons.favorite)),
+              _CountTab<WaveRequest>(
+                label: 'Received',
+                icon: Icons.inbox,
+                stream: WaveService.instance.watchIncomingWaves(user.uid),
+              ),
+              _CountTab<WaveRequest>(
+                label: 'Sent',
+                icon: Icons.send,
+                stream: WaveService.instance.watchOutgoingWaves(user.uid),
+              ),
+              _CountTab<MutualMatch>(
+                label: 'Matched',
+                icon: Icons.favorite,
+                stream: WaveService.instance.watchMutualMatches(user.uid),
+              ),
             ],
           ),
         ),
@@ -48,6 +61,40 @@ class WavesPage extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Tab that shows a live count next to the label based on a stream of items
+class _CountTab<T> extends StatelessWidget {
+  const _CountTab({
+    required this.label,
+    required this.icon,
+    required this.stream,
+  });
+
+  final String label;
+  final IconData icon;
+  final Stream<List<T>> stream;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<T>>(
+      stream: stream,
+      builder: (context, snapshot) {
+        final count = snapshot.data?.length ?? 0;
+        final text = count > 0 ? '$label ($count)' : label;
+        return Tab(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon),
+              const SizedBox(width: 8),
+              Text(text),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -123,6 +170,8 @@ class _IncomingWavesTab extends StatelessWidget {
                 children: [
                   Text(
                     '$senderName waved at you!',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -453,6 +502,8 @@ class _OutgoingWavesTab extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     'Sent ${wave.timeAgo} • Waiting for response',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.textSecondaryLight,
                     ),
@@ -588,10 +639,15 @@ class _MutualMatchesTab extends StatelessWidget {
                         color: AppColors.error,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        'Matched with $otherName',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
+                      Expanded(
+                        child: Text(
+                          'Matched with $otherName',
+                          maxLines: 1,
+                          softWrap: false,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],
@@ -608,13 +664,18 @@ class _MutualMatchesTab extends StatelessWidget {
             ),
 
             // Chat button
-            IconButton(
-              onPressed: () async {
-                await ChatUtils.startConversationWith(context, otherUserId);
-              },
-              icon: const Icon(Icons.chat_bubble),
-              color: AppColors.primary,
-              tooltip: 'Start chat',
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: IconButton(
+                visualDensity: VisualDensity.compact,
+                onPressed: () async {
+                  await ChatUtils.startConversationWith(context, otherUserId);
+                },
+                icon: const Icon(Icons.chat_bubble),
+                color: AppColors.primary,
+                tooltip: 'Start chat',
+              ),
             ),
           ],
         ),

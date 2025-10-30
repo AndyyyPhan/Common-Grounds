@@ -1,8 +1,14 @@
-import * as functions from 'firebase-functions';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { setGlobalOptions } from 'firebase-functions/v2';
 import * as admin from 'firebase-admin';
 
 // Initialize Firebase Admin
 admin.initializeApp();
+
+// Set global options for 2nd gen functions
+setGlobalOptions({
+  region: 'us-central1',
+});
 
 // Types for our data structures
 interface UserLocation {
@@ -125,13 +131,16 @@ function getNearbyGeohashes(
 /**
  * Cloud Function to find nearby users with similar interests
  */
-export const findNearbyMatches = functions.https.onCall(
-  async (data: FindMatchesRequest, context): Promise<FindMatchesResponse> => {
+export const findNearbyMatches = onCall(
+  { region: 'us-central1' },
+  async (request): Promise<FindMatchesResponse> => {
+    const data = request.data as FindMatchesRequest;
+    const context = request.auth;
     const startTime = Date.now();
     
     // Validate authentication
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
+    if (!context) {
+      throw new HttpsError(
         'unauthenticated',
         'User must be authenticated to find matches'
       );
@@ -145,8 +154,8 @@ export const findNearbyMatches = functions.https.onCall(
     } = data;
 
     // Validate current user
-    if (currentUserUid !== context.auth.uid) {
-      throw new functions.https.HttpsError(
+    if (currentUserUid !== context.uid) {
+      throw new HttpsError(
         'permission-denied',
         'Can only find matches for authenticated user'
       );
@@ -158,7 +167,7 @@ export const findNearbyMatches = functions.https.onCall(
       // Get current user profile
       const currentUserDoc = await db.collection('users').doc(currentUserUid).get();
       if (!currentUserDoc.exists) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'not-found',
           'Current user profile not found'
         );
@@ -188,7 +197,7 @@ export const findNearbyMatches = functions.https.onCall(
       const currentLng = currentUserProfile.location.longitude;
 
       if (!currentLat || !currentLng) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'invalid-argument',
           'Current user location coordinates not available'
         );
@@ -217,7 +226,7 @@ export const findNearbyMatches = functions.https.onCall(
       let totalProcessed = 0;
 
       // Pre-compute current user's interest set for O(1) lookups
-      const currentInterestsSet = new Set(currentUserProfile.interests);
+      // const currentInterestsSet = new Set(currentUserProfile.interests);
 
       for (const doc of query.docs) {
         // Skip current user
@@ -290,11 +299,11 @@ export const findNearbyMatches = functions.https.onCall(
     } catch (error) {
       console.error('Error in findNearbyMatches:', error);
       
-      if (error instanceof functions.https.HttpsError) {
+      if (error instanceof HttpsError) {
         throw error;
       }
       
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'internal',
         'An error occurred while finding matches',
         error
@@ -306,11 +315,15 @@ export const findNearbyMatches = functions.https.onCall(
 /**
  * Cloud Function to get user profile by UID
  */
-export const getUserProfile = functions.https.onCall(
-  async (data: { uid: string }, context) => {
+export const getUserProfile = onCall(
+  { region: 'us-central1' },
+  async (request) => {
+    const data = request.data as { uid: string };
+    const context = request.auth;
+    
     // Validate authentication
-    if (!context.auth) {
-      throw new functions.https.HttpsError(
+    if (!context) {
+      throw new HttpsError(
         'unauthenticated',
         'User must be authenticated'
       );
@@ -323,7 +336,7 @@ export const getUserProfile = functions.https.onCall(
       const userDoc = await db.collection('users').doc(uid).get();
       
       if (!userDoc.exists) {
-        throw new functions.https.HttpsError(
+        throw new HttpsError(
           'not-found',
           'User profile not found'
         );
@@ -333,11 +346,11 @@ export const getUserProfile = functions.https.onCall(
     } catch (error) {
       console.error('Error in getUserProfile:', error);
       
-      if (error instanceof functions.https.HttpsError) {
+      if (error instanceof HttpsError) {
         throw error;
       }
       
-      throw new functions.https.HttpsError(
+      throw new HttpsError(
         'internal',
         'An error occurred while getting user profile',
         error
