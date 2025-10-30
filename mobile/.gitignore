@@ -95,6 +95,12 @@ local.properties
 .env.*
 .envrc
 
+# Firebase Cloud Functions
+functions/node_modules/
+functions/lib/
+functions/.env
+functions/.env.*
+
 # Future: Node/Express server
 server/node_modules/
 server/.env

@@ -15,6 +15,7 @@ class ProximityService {
   final Map<String, List<ProximityMatch>> _matchCache = {};
   final Map<String, DateTime> _cacheTimestamps = {};
   static const Duration _cacheExpiry = Duration(minutes: 5);
+  static const double maxDistanceKmFinal = .1;
 
   /// Find nearby users with similar interests
   ///
@@ -25,7 +26,7 @@ class ProximityService {
   /// - limit: Maximum number of results to return (default: 10)
   Future<List<ProximityMatch>> findNearbyMatches(
     UserProfile currentUserProfile, {
-    double maxDistanceKm = 5.0,
+    double maxDistanceKm = maxDistanceKmFinal,
     int minCommonInterests = 1,
     int limit = 10,
   }) async {
@@ -262,10 +263,13 @@ class ProximityService {
     final neighbors = _getGeohashNeighbors(baseGeohash);
     geohashes.addAll(neighbors);
 
+    // Limit to 10 geohashes (Firestore whereIn limit)
+    final limitedGeohashes = geohashes.take(10).toList();
+
     debugPrint(
-      '🔍 Generated ${geohashes.length} optimized geohashes for search',
+      '🔍 Generated ${limitedGeohashes.length} optimized geohashes for search (limited to 10 for Firestore)',
     );
-    return geohashes.toList();
+    return limitedGeohashes;
   }
 
   /// Get the 8 neighboring geohashes
@@ -357,7 +361,7 @@ class ProximityService {
   /// Stream of nearby matches (real-time updates) - OPTIMIZED
   Stream<List<ProximityMatch>> watchNearbyMatches(
     UserProfile currentUserProfile, {
-    double maxDistanceKm = 5.0,
+    double maxDistanceKm = maxDistanceKmFinal,
     int minCommonInterests = 1,
     int limit = 10,
   }) {
@@ -426,7 +430,7 @@ class ProximityService {
   /// Force refresh matches (bypasses cache)
   Future<List<ProximityMatch>> refreshMatches(
     UserProfile currentUserProfile, {
-    double maxDistanceKm = 5.0,
+    double maxDistanceKm = maxDistanceKmFinal,
     int minCommonInterests = 1,
     int limit = 10,
   }) async {
