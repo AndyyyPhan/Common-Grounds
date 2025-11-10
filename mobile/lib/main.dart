@@ -5,10 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 // App imports
 import 'app_shell.dart';
-import 'onboarding/onboarding_page.dart';
-import 'services/local_prefs.dart';
 import 'firebase_options.dart';
-import 'pages/sign_in_page.dart';
+import 'pages/welcome_page.dart';
 import 'services/profile_service.dart';
 import 'models/user_profile.dart';
 import 'pages/profile_setup_page.dart';
@@ -55,8 +53,7 @@ class MyApp extends StatelessWidget {
       // Named routes for navigation
       routes: {
         '/app': (_) => const AppShell(),
-        '/onboarding': (_) => const OnboardingPage(),
-        '/signin': (_) => const SignInPage(),
+        '/welcome': (_) => const WelcomePage(),
       },
 
       // Bootstrap gate handles initial routing logic
@@ -68,13 +65,12 @@ class MyApp extends StatelessWidget {
 /// Bootstrap Gate - Authentication and Profile Flow Manager
 ///
 /// This widget handles the initial routing logic for the app:
-/// 1. Check if user has completed onboarding
-/// 2. Check if user is authenticated with Firebase
-/// 3. Check if user has completed their profile
-/// 4. Initialize user services (FCM, location tracking)
-/// 5. Route to appropriate screen based on state
+/// 1. Check if user is authenticated with Firebase
+/// 2. Check if user has completed their profile
+/// 3. Initialize user services (FCM, location tracking)
+/// 4. Route to appropriate screen based on state
 ///
-/// Flow: Onboarding → Sign In → Profile Setup → App Shell
+/// Flow: Welcome (Auth) → Profile Setup → App Shell
 class BootstrapGate extends StatefulWidget {
   const BootstrapGate({super.key});
 
@@ -83,19 +79,6 @@ class BootstrapGate extends StatefulWidget {
 }
 
 class _BootstrapGateState extends State<BootstrapGate> {
-  bool? _onboarded;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  /// Load onboarding state from local storage
-  Future<void> _load() async {
-    _onboarded = await LocalPrefs.hasOnboarded();
-    if (mounted) setState(() {});
-  }
 
   /// Initialize FCM and location services for the authenticated user.
   ///
@@ -106,56 +89,73 @@ class _BootstrapGateState extends State<BootstrapGate> {
   /// Note: Location permission denial doesn't block the app -
   /// users can enable it later in settings.
   Future<void> _initUserServices(String uid) async {
+    debugPrint('🔍 _initUserServices: Starting for uid=$uid');
+
     try {
+      debugPrint('🔍 _initUserServices: Initializing FCM...');
       // Initialize FCM for push notifications
       await MessagingService.instance.initForUser(uid);
+      debugPrint('🔍 _initUserServices: FCM initialized successfully');
     } catch (e) {
       debugPrint('FCM initialization failed (non-critical): $e');
     }
 
     try {
+      debugPrint('🔍 _initUserServices: Initializing location service...');
       // Initialize location tracking (will request permissions)
       // Don't fail if location permission is denied
-      await LocationService.instance.initForUser(uid);
+      // Add timeout to prevent hanging
+      await LocationService.instance.initForUser(uid).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          debugPrint('🔍 _initUserServices: Location service timed out (continuing anyway)');
+          return false;
+        },
+      );
+      debugPrint('🔍 _initUserServices: Location service initialized successfully');
     } catch (e) {
       debugPrint('Location service initialization failed (non-critical): $e');
     }
+
+    debugPrint('🔍 _initUserServices: Completed');
   }
 
   @override
   Widget build(BuildContext context) {
-    // Loading onboarding state
-    if (_onboarded == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    // Show onboarding if not completed
-    if (_onboarded == false) {
-      return const OnboardingPage();
-    }
-
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, authSnap) {
+        debugPrint('🔍 BootstrapGate: Auth connection state = ${authSnap.connectionState}');
+
         if (authSnap.connectionState == ConnectionState.waiting) {
+          debugPrint('🔍 BootstrapGate: Waiting for auth...');
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
         if (authSnap.hasError) {
+          debugPrint('🔍 BootstrapGate: Auth error = ${authSnap.error}');
           return Scaffold(
             body: Center(child: Text('Auth error: ${authSnap.error}')),
           );
         }
 
         final user = authSnap.data;
-        if (user == null) return const SignInPage();
+        debugPrint('🔍 BootstrapGate: User = ${user?.uid ?? "null"}');
+        if (user == null) {
+          debugPrint('🔍 BootstrapGate: No user, showing WelcomePage');
+          return const WelcomePage();
+        }
 
         // Ensure there's a profile doc, then watch it.
+        debugPrint('🔍 BootstrapGate: Initializing user services for ${user.uid}...');
         return FutureBuilder<void>(
           future: _initUserServices(user.uid),
           builder: (context, initSnap) {
+            debugPrint('🔍 BootstrapGate: Service init state = ${initSnap.connectionState}');
+
             if (initSnap.connectionState != ConnectionState.done) {
+              debugPrint('🔍 BootstrapGate: Waiting for services to initialize...');
               return const Scaffold(
                 body: Center(child: CircularProgressIndicator()),
               );
@@ -163,6 +163,7 @@ class _BootstrapGateState extends State<BootstrapGate> {
             // If init fails, don't block the app—just continue
             // (you can show a snackbar/toast elsewhere if desired)
             if (initSnap.hasError) {
+              debugPrint('🔍 BootstrapGate: Service init error = ${initSnap.error}');
               return Scaffold(
                 body: Center(
                   child: Text('Service init error: ${initSnap.error}'),
@@ -170,15 +171,20 @@ class _BootstrapGateState extends State<BootstrapGate> {
               );
             }
 
+            debugPrint('🔍 BootstrapGate: Services initialized, watching profile...');
             return StreamBuilder<UserProfile?>(
               stream: ProfileService.instance.watchProfile(user.uid),
               builder: (context, profSnap) {
+                debugPrint('🔍 BootstrapGate: Profile connection state = ${profSnap.connectionState}');
+
                 if (profSnap.connectionState == ConnectionState.waiting) {
+                  debugPrint('🔍 BootstrapGate: Waiting for profile...');
                   return const Scaffold(
                     body: Center(child: CircularProgressIndicator()),
                   );
                 }
                 if (profSnap.hasError) {
+                  debugPrint('🔍 BootstrapGate: Profile error = ${profSnap.error}');
                   return Scaffold(
                     body: Center(
                       child: Text('Profile load error: ${profSnap.error}'),
@@ -186,7 +192,10 @@ class _BootstrapGateState extends State<BootstrapGate> {
                   );
                 }
                 final profile = profSnap.data;
+                debugPrint('🔍 BootstrapGate: Profile = ${profile?.uid}, isComplete = ${profile?.isComplete}');
+
                 if (profile == null || !profile.isComplete) {
+                  debugPrint('🔍 BootstrapGate: Profile incomplete, showing ProfileSetupPage');
                   return ProfileSetupPage(
                     profile:
                         profile ??
@@ -203,6 +212,7 @@ class _BootstrapGateState extends State<BootstrapGate> {
                         ),
                   );
                 }
+                debugPrint('🔍 BootstrapGate: Profile complete, showing AppShell');
                 return const AppShell();
               },
             );
