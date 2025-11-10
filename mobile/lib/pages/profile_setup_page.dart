@@ -3,31 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import '../models/user_profile.dart';
-import '../services/profile_service.dart';
-import '../core/widgets/avatar.dart';
-
-const kInterestOptions = <String>[
-  'Basketball',
-  'Gym',
-  'Volleyball',
-  'Running',
-  'Pickleball',
-  'Gaming',
-  'Board Games',
-  'Coding',
-  'Hackathons',
-  'Coffee',
-  'Boba',
-  'Study Buddy',
-  'Music',
-  'Concerts',
-  'Photography',
-  'Hiking',
-  'Foodie',
-  'Movies',
-  'Anime',
-];
+import 'package:mobile/models/user_profile.dart';
+import 'package:mobile/services/profile_service.dart';
+import 'package:mobile/core/widgets/avatar.dart';
+import 'package:mobile/constants/interest_categories.dart';
+import 'package:mobile/utils/interest_utils.dart';
 
 class ProfileSetupPage extends StatefulWidget {
   final UserProfile profile;
@@ -49,6 +29,12 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   bool _showCustomInterestField = false;
   File? _newProfileImage; // New image selected from gallery/camera
   String? _profileImageUrl; // Current image URL from profile
+
+  // Track which categories are expanded (start with Academic expanded)
+  final Map<InterestCategory, bool> _expandedCategories = {
+    for (var category in InterestCategory.values)
+      category: category == InterestCategory.academic,
+  };
 
   @override
   void initState() {
@@ -155,21 +141,36 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     final custom = _customInterest.text.trim();
     if (custom.isEmpty) return;
 
+    // Normalize the interest (fuzzy matching + synonym mapping)
+    final normalizedInterest = normalizeInterest(custom);
+
     // Check if it already exists (case-insensitive)
-    final lowerCustom = custom.toLowerCase();
-    final exists = _interests.any((i) => i.toLowerCase() == lowerCustom);
+    final lowerNormalized = normalizedInterest.toLowerCase();
+    final exists = _interests.any((i) => i.toLowerCase() == lowerNormalized);
 
     if (!exists) {
       setState(() {
-        _interests.add(custom);
+        _interests.add(normalizedInterest);
         _customInterest.clear();
         _showCustomInterestField = false;
       });
+
+      // Show feedback if the interest was normalized
+      if (normalizedInterest != custom) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Added "$normalizedInterest" (matched from "$custom")',
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     } else {
       // Show a message that interest already exists
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Interest "$custom" already added'),
+          content: Text('Interest "$normalizedInterest" already added'),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -231,7 +232,9 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
 
   @override
   Widget build(BuildContext context) {
-    final canSave = _interests.isNotEmpty; // your completion rule
+    // Validate interest selection
+    final validationError = validateInterestSelection(_interests.toList());
+    final canSave = validationError == null;
     return Scaffold(
       appBar: AppBar(title: const Text('Create your profile')),
       body: SafeArea(
@@ -328,62 +331,159 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
               ],
             ),
             const SizedBox(height: 16),
-            const Text('Select your interests'),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+
+            // Interest selection header with count
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Predefined interests
-                for (final tag in kInterestOptions)
-                  FilterChip(
-                    label: Text(tag),
-                    selected: _interests.contains(tag),
-                    onSelected: (sel) {
-                      setState(() {
-                        if (sel) {
-                          _interests.add(tag);
-                        } else {
-                          _interests.remove(tag);
-                        }
-                      });
-                    },
+                const Text(
+                  'Select your interests',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  '${_interests.length} selected',
+                  style: TextStyle(
+                    color: _interests.length >= 5
+                        ? Colors.green
+                        : Colors.orange,
+                    fontWeight: FontWeight.bold,
                   ),
-                // Custom interests (show as selectable filter chips with delete option)
-                for (final customTag in _interests.where(
-                  (i) => !kInterestOptions.contains(i),
-                ))
-                  FilterChip(
-                    label: Text(customTag),
-                    selected:
-                        true, // Custom interests are always selected (they're in _interests)
-                    deleteIcon: const Icon(Icons.close, size: 18),
-                    onSelected: (sel) {
-                      // Deselecting removes the custom interest
-                      if (!sel) {
-                        setState(() {
-                          _interests.remove(customTag);
-                        });
-                      }
-                    },
-                    onDeleted: () {
-                      // Delete button also removes it
-                      setState(() {
-                        _interests.remove(customTag);
-                      });
-                    },
-                  ),
-                // "Add custom" action chip
-                ActionChip(
-                  avatar: const Icon(Icons.add, size: 18),
-                  label: const Text('Add custom'),
-                  onPressed: () {
-                    setState(() {
-                      _showCustomInterestField = !_showCustomInterestField;
-                    });
-                  },
                 ),
               ],
+            ),
+            if (_interests.length < 5)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Select at least 5 interests from 2+ categories',
+                  style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
+                ),
+              ),
+            const SizedBox(height: 12),
+
+            // Categorized interest selection
+            ...InterestCategory.values.map((category) {
+              final categoryInterests = kCategorizedInterests[category] ?? [];
+              final selectedInCategory = _interests
+                  .where((i) => categoryInterests.contains(i))
+                  .length;
+              final isExpanded = _expandedCategories[category] ?? false;
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: Text(
+                        category.emoji,
+                        style: const TextStyle(fontSize: 24),
+                      ),
+                      title: Text(category.displayName),
+                      subtitle: Text(
+                        '$selectedInCategory selected',
+                        style: TextStyle(
+                          color: selectedInCategory > 0
+                              ? Colors.green
+                              : Colors.grey,
+                        ),
+                      ),
+                      trailing: Icon(
+                        isExpanded
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                      ),
+                      onTap: () {
+                        setState(() {
+                          _expandedCategories[category] = !isExpanded;
+                        });
+                      },
+                    ),
+                    if (isExpanded)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final interest in categoryInterests)
+                              FilterChip(
+                                label: Text(interest),
+                                selected: _interests.contains(interest),
+                                onSelected: (selected) {
+                                  setState(() {
+                                    if (selected) {
+                                      _interests.add(interest);
+                                    } else {
+                                      _interests.remove(interest);
+                                    }
+                                  });
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }),
+
+            // Show custom interests that don't fit predefined categories
+            if (_interests.any((interest) => !kAllInterests.contains(interest)))
+              Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Custom Interests',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final customInterest in _interests.where(
+                            (i) => !kAllInterests.contains(i),
+                          ))
+                            FilterChip(
+                              label: Text(customInterest),
+                              selected: true,
+                              deleteIcon: const Icon(Icons.close, size: 18),
+                              onSelected: (selected) {
+                                if (!selected) {
+                                  setState(() {
+                                    _interests.remove(customInterest);
+                                  });
+                                }
+                              },
+                              onDeleted: () {
+                                setState(() {
+                                  _interests.remove(customInterest);
+                                });
+                              },
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // "Add custom interest" button
+            OutlinedButton.icon(
+              icon: const Icon(Icons.add),
+              label: const Text('Add custom interest'),
+              onPressed: () {
+                setState(() {
+                  _showCustomInterestField = !_showCustomInterestField;
+                });
+              },
             ),
             // Custom interest input field
             if (_showCustomInterestField) ...[

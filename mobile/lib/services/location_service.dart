@@ -38,19 +38,21 @@ class LocationService {
 
   /// Initialize location tracking for a user
   Future<bool> initForUser(String uid) async {
+    debugPrint('📍 LocationService: initForUser starting for uid=$uid');
     _currentUserId = uid;
 
     // Check and request permissions
+    debugPrint('📍 LocationService: Requesting location permission...');
     final hasPermission = await _requestLocationPermission();
     if (!hasPermission) {
-      if (kDebugMode) {
-        debugPrint('Location permission denied');
-      }
+      debugPrint('📍 LocationService: Location permission denied');
       return false;
     }
+    debugPrint('📍 LocationService: Location permission granted');
 
     // Load existing profile location. If present, treat it as authoritative and
     // skip auto-updates (manual override). If absent, fall back to device.
+    debugPrint('📍 LocationService: Checking for saved profile location...');
     try {
       final snap = await _db.collection('users').doc(uid).get();
       final data = snap.data();
@@ -62,50 +64,58 @@ class LocationService {
         // Respect the saved profile location as source of truth
         _manualOverrideActive = true;
         stopTracking();
-        if (kDebugMode) {
-          debugPrint('🔒 Found saved profile location — using manual override');
-        }
+        debugPrint('🔒 Found saved profile location — using manual override');
         return true;
       }
+      debugPrint('📍 LocationService: No saved location found, will use device location');
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('⚠️ Error reading saved location: $e');
-      }
+      debugPrint('⚠️ Error reading saved location: $e');
     }
 
     // If no saved coordinates, ensure location services are enabled and start
     // auto updates from device (coarse accuracy)
+    debugPrint('📍 LocationService: Checking if location services are enabled...');
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      if (kDebugMode) {
-        debugPrint('Location services are disabled');
-      }
+      debugPrint('📍 LocationService: Location services are disabled');
       return false;
     }
+    debugPrint('📍 LocationService: Location services are enabled');
 
+    // Update location immediately
+    debugPrint('📍 LocationService: Updating user location...');
     await _updateUserLocation();
+
+    // Start periodic updates
+    debugPrint('📍 LocationService: Starting periodic tracking...');
     startTracking();
 
+    debugPrint('📍 LocationService: initForUser completed successfully');
     return true;
   }
 
   /// Request location permission from user
   Future<bool> _requestLocationPermission() async {
+    debugPrint('📍 LocationService: Checking current permission status...');
     var status = await Permission.locationWhenInUse.status;
+    debugPrint('📍 LocationService: Current status = $status');
 
     if (status.isDenied) {
+      debugPrint('📍 LocationService: Permission denied, requesting...');
       status = await Permission.locationWhenInUse.request();
+      debugPrint('📍 LocationService: After request, status = $status');
     }
 
     if (status.isPermanentlyDenied) {
-      if (kDebugMode) {
-        debugPrint('Location permission permanently denied. Opening settings.');
-      }
-      await openAppSettings();
+      debugPrint('📍 LocationService: Location permission permanently denied.');
+      // Don't call openAppSettings() during startup - it can hang on emulators
+      // Users can enable location later in app settings
       return false;
     }
 
-    return status.isGranted || status.isLimited;
+    final result = status.isGranted || status.isLimited;
+    debugPrint('📍 LocationService: Permission result = $result');
+    return result;
   }
 
   /// Get current location and update Firestore
