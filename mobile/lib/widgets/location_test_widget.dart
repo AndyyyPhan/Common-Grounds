@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:geolocator/geolocator.dart';
 import '../services/location_service.dart';
 
 /// Debug widget for testing location functionality
@@ -66,7 +67,9 @@ class _LocationTestWidgetState extends State<LocationTestWidget> {
     }
 
     await LocationService.instance.setCustomLocation(lat, lng);
-    
+
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Location set to: $lat, $lng')),
     );
