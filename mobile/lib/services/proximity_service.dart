@@ -2,7 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:math';
 import 'dart:async';
-import '../models/user_profile.dart';
+import 'package:mobile/models/user_profile.dart';
+import 'package:mobile/constants/interest_categories.dart';
 
 /// Service for finding nearby users with similar interests
 class ProximityService {
@@ -122,11 +123,10 @@ class ProximityService {
           // Filter by minimum common interests
           if (commonInterests.length < minCommonInterests) continue;
 
-          // Calculate match score (higher is better)
-          final matchScore = _calculateMatchScore(
-            commonInterests.length,
-            currentUserProfile.interests.length,
-            userProfile.interests.length,
+          // Calculate match score using category-weighted algorithm
+          final matchScore = _calculateCategoryWeightedMatchScore(
+            currentUserProfile,
+            userProfile,
             distance,
           );
 
@@ -190,11 +190,10 @@ class ProximityService {
             // Filter by minimum common interests
             if (commonInterests.length < minCommonInterests) continue;
 
-            // Calculate match score (higher is better)
-            final matchScore = _calculateMatchScore(
-              commonInterests.length,
-              currentUserProfile.interests.length,
-              userProfile.interests.length,
+            // Calculate match score using category-weighted algorithm
+            final matchScore = _calculateCategoryWeightedMatchScore(
+              currentUserProfile,
+              userProfile,
               distance,
             );
 
@@ -337,25 +336,98 @@ class ProximityService {
         .toList();
   }
 
-  /// Calculate match score based on interests and distance
-  double _calculateMatchScore(
-    int commonInterestsCount,
-    int currentUserInterestsCount,
-    int otherUserInterestsCount,
+  /// Calculate category-weighted match score between two complete user profiles
+  /// This is the primary matching algorithm for full profile comparisons
+  /// Match score is purely based on interest similarity, NOT distance
+  /// Distance is used only for filtering (radius), not scoring
+  double _calculateCategoryWeightedMatchScore(
+    UserProfile currentUser,
+    UserProfile otherUser,
     double distanceKm,
   ) {
-    // Interest similarity score (0-1)
-    final interestSimilarity =
-        commonInterestsCount /
-        (currentUserInterestsCount +
-            otherUserInterestsCount -
-            commonInterestsCount);
+    // 1. Calculate category-weighted interest similarity
+    final interestScore = _calculateCategoryWeightedSimilarity(
+      currentUser,
+      otherUser,
+    );
 
-    // Distance score (closer is better, 0-1)
-    final distanceScore = (10 - distanceKm.clamp(0, 10)) / 10;
+    // 2. Profile quality multiplier (encourages complete profiles)
+    final qualityMultiplier =
+        (currentUser.profileCompleteness + otherUser.profileCompleteness) / 2;
 
-    // Weighted combination: 70% interests, 30% distance
-    return (interestSimilarity * 0.7) + (distanceScore * 0.3);
+    // 3. Final score: pure interest similarity scaled by profile quality
+    // Distance is NOT included in match score - used only for filtering
+    return interestScore * qualityMultiplier;
+  }
+
+  /// Calculate weighted Overlap Coefficient similarity per category
+  /// Each category's similarity is weighted by its importance (kCategoryWeights)
+  ///
+  /// Uses Overlap Coefficient instead of Jaccard to reward absolute matches
+  /// without penalizing users for having diverse interests.
+  double _calculateCategoryWeightedSimilarity(
+    UserProfile user1,
+    UserProfile user2,
+  ) {
+    // Group interests by category for both users
+    final user1Categories = user1.getInterestsByCategory();
+    final user2Categories = user2.getInterestsByCategory();
+
+    double weightedScore = 0.0;
+    double totalWeight = 0.0;
+
+    // Calculate Overlap Coefficient for each category
+    for (final category in InterestCategory.values) {
+      final interests1 = user1Categories[category] ?? [];
+      final interests2 = user2Categories[category] ?? [];
+
+      // Skip if neither user has interests in this category
+      if (interests1.isEmpty && interests2.isEmpty) {
+        continue;
+      }
+
+      // Calculate Overlap Coefficient for this category
+      final categoryScore = _calculateOverlapCoefficient(interests1, interests2);
+
+      // Weight by category importance
+      final categoryWeight = kCategoryWeights[category] ?? 0.0;
+      weightedScore += categoryScore * categoryWeight;
+      totalWeight += categoryWeight;
+    }
+
+    // Normalize by total weight to get final score (0-1)
+    return totalWeight > 0 ? weightedScore / totalWeight : 0.0;
+  }
+
+  /// Calculate Overlap Coefficient between two interest lists
+  /// Overlap Coefficient = |A ∩ B| / min(|A|, |B|)
+  ///
+  /// This is better than Jaccard for friend-finding because it:
+  /// - Rewards absolute number of matches (not penalized by total interests)
+  /// - Better handles asymmetric matching (users with different interest counts)
+  /// - Used by industry leaders (NVIDIA, LinkedIn) for similarity matching
+  ///
+  /// Example:
+  /// - User A: [Coding, Math, Physics, Engineering, Research, Study Buddy] (6)
+  /// - User B: [Coding, Data Science, Hackathons, Reading, Languages] (5)
+  /// - Common: 1 (Coding)
+  /// - Jaccard = 1/10 = 0.10 (penalizes diverse interests)
+  /// - Overlap = 1/5 = 0.20 (better, rewards absolute matches)
+  double _calculateOverlapCoefficient(
+    List<String> interests1,
+    List<String> interests2,
+  ) {
+    if (interests1.isEmpty || interests2.isEmpty) {
+      return 0.0;
+    }
+
+    final set1 = interests1.toSet();
+    final set2 = interests2.toSet();
+
+    final intersection = set1.intersection(set2).length;
+    final minSize = min(set1.length, set2.length);
+
+    return minSize > 0 ? intersection / minSize : 0.0;
   }
 
   /// Stream of nearby matches (real-time updates) - OPTIMIZED

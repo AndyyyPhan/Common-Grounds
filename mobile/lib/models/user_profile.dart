@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:mobile/constants/interest_categories.dart';
+import 'package:mobile/utils/interest_utils.dart';
 
 class UserProfile {
   final String uid;
@@ -26,7 +28,54 @@ class UserProfile {
   });
 
   bool get isComplete =>
-      interests.isNotEmpty; // tweak your own “completion” rule
+      interests.isNotEmpty; // tweak your own "completion" rule
+
+  /// Returns a profile completeness score (0.0 to 1.0)
+  /// Used as a multiplier in the matching algorithm
+  double get profileCompleteness {
+    double score = 0.0;
+
+    // Basic info (40%)
+    if (displayName != null && displayName!.isNotEmpty) score += 0.15;
+    if (photoUrl != null && photoUrl!.isNotEmpty) score += 0.15;
+    if (bio != null && bio!.isNotEmpty) score += 0.10;
+
+    // Academic info (20%)
+    if (major != null && major!.isNotEmpty) score += 0.10;
+    if (classYear != null && classYear!.isNotEmpty) score += 0.10;
+
+    // Interests (40% - most important for matching)
+    if (interests.length >= 5) {
+      score += 0.20;
+    } else if (interests.isNotEmpty) {
+      score += 0.20 * (interests.length / 5);
+    }
+    // Bonus for diverse interests across categories
+    final categories = getInterestsByCategory().keys.length;
+    if (categories >= 3) {
+      score += 0.20;
+    } else if (categories > 0) {
+      score += 0.20 * (categories / 3);
+    }
+
+    return score.clamp(0.0, 1.0);
+  }
+
+  /// Groups interests by category for display and matching
+  /// Returns a map of category to list of interests
+  Map<InterestCategory, List<String>> getInterestsByCategory() {
+    return groupInterestsByCategory(interests);
+  }
+
+  /// Gets interests for a specific category
+  List<String> getInterestsForCategory(InterestCategory category) {
+    return getInterestsByCategory()[category] ?? [];
+  }
+
+  /// Counts how many interests are in a specific category
+  int countInterestsInCategory(InterestCategory category) {
+    return getInterestsForCategory(category).length;
+  }
 
   Map<String, dynamic> toMap() => {
     'uid': uid,
