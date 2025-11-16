@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mobile/constants/interest_categories.dart';
+import 'package:mobile/constants/proximity_constants.dart';
 import 'package:mobile/utils/interest_utils.dart';
 
 class UserProfile {
@@ -13,6 +14,7 @@ class UserProfile {
   final DateTime createdAt;
   final DateTime updatedAt;
   final UserLocation? location;
+  final double? searchRadiusKm; // User's preferred search radius
 
   const UserProfile({
     required this.uid,
@@ -25,10 +27,17 @@ class UserProfile {
     required this.createdAt,
     required this.updatedAt,
     this.location,
+    this.searchRadiusKm,
   });
 
   bool get isComplete =>
       interests.isNotEmpty; // tweak your own "completion" rule
+
+  /// Gets the effective search radius, using user preference or default
+  double get effectiveSearchRadiusKm {
+    if (searchRadiusKm == null) return kDefaultSearchRadiusKm;
+    return clampSearchRadius(searchRadiusKm!);
+  }
 
   /// Returns a profile completeness score (0.0 to 1.0)
   /// Used as a multiplier in the matching algorithm
@@ -88,6 +97,7 @@ class UserProfile {
     'createdAt': createdAt.millisecondsSinceEpoch,
     'updatedAt': updatedAt.millisecondsSinceEpoch,
     if (location != null) 'location': location!.toMap(),
+    if (searchRadiusKm != null) 'searchRadiusKm': searchRadiusKm,
   };
 
   factory UserProfile.fromMap(Map<String, dynamic> m) {
@@ -115,6 +125,7 @@ class UserProfile {
       location: m['location'] != null
           ? UserLocation.fromMap(m['location'] as Map<String, dynamic>)
           : null,
+      searchRadiusKm: m['searchRadiusKm'] as double?,
     );
   }
 }

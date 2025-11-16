@@ -79,7 +79,6 @@ class BootstrapGate extends StatefulWidget {
 }
 
 class _BootstrapGateState extends State<BootstrapGate> {
-
   /// Initialize FCM and location services for the authenticated user.
   ///
   /// This is called once the user is authenticated to set up:
@@ -105,14 +104,20 @@ class _BootstrapGateState extends State<BootstrapGate> {
       // Initialize location tracking (will request permissions)
       // Don't fail if location permission is denied
       // Add timeout to prevent hanging
-      await LocationService.instance.initForUser(uid).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          debugPrint('🔍 _initUserServices: Location service timed out (continuing anyway)');
-          return false;
-        },
+      await LocationService.instance
+          .initForUser(uid)
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              debugPrint(
+                '🔍 _initUserServices: Location service timed out (continuing anyway)',
+              );
+              return false;
+            },
+          );
+      debugPrint(
+        '🔍 _initUserServices: Location service initialized successfully',
       );
-      debugPrint('🔍 _initUserServices: Location service initialized successfully');
     } catch (e) {
       debugPrint('Location service initialization failed (non-critical): $e');
     }
@@ -125,7 +130,9 @@ class _BootstrapGateState extends State<BootstrapGate> {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, authSnap) {
-        debugPrint('🔍 BootstrapGate: Auth connection state = ${authSnap.connectionState}');
+        debugPrint(
+          '🔍 BootstrapGate: Auth connection state = ${authSnap.connectionState}',
+        );
 
         if (authSnap.connectionState == ConnectionState.waiting) {
           debugPrint('🔍 BootstrapGate: Waiting for auth...');
@@ -148,14 +155,20 @@ class _BootstrapGateState extends State<BootstrapGate> {
         }
 
         // Ensure there's a profile doc, then watch it.
-        debugPrint('🔍 BootstrapGate: Initializing user services for ${user.uid}...');
+        debugPrint(
+          '🔍 BootstrapGate: Initializing user services for ${user.uid}...',
+        );
         return FutureBuilder<void>(
           future: _initUserServices(user.uid),
           builder: (context, initSnap) {
-            debugPrint('🔍 BootstrapGate: Service init state = ${initSnap.connectionState}');
+            debugPrint(
+              '🔍 BootstrapGate: Service init state = ${initSnap.connectionState}',
+            );
 
             if (initSnap.connectionState != ConnectionState.done) {
-              debugPrint('🔍 BootstrapGate: Waiting for services to initialize...');
+              debugPrint(
+                '🔍 BootstrapGate: Waiting for services to initialize...',
+              );
               return const Scaffold(
                 body: Center(child: CircularProgressIndicator()),
               );
@@ -163,7 +176,9 @@ class _BootstrapGateState extends State<BootstrapGate> {
             // If init fails, don't block the app—just continue
             // (you can show a snackbar/toast elsewhere if desired)
             if (initSnap.hasError) {
-              debugPrint('🔍 BootstrapGate: Service init error = ${initSnap.error}');
+              debugPrint(
+                '🔍 BootstrapGate: Service init error = ${initSnap.error}',
+              );
               return Scaffold(
                 body: Center(
                   child: Text('Service init error: ${initSnap.error}'),
@@ -171,11 +186,15 @@ class _BootstrapGateState extends State<BootstrapGate> {
               );
             }
 
-            debugPrint('🔍 BootstrapGate: Services initialized, watching profile...');
+            debugPrint(
+              '🔍 BootstrapGate: Services initialized, watching profile...',
+            );
             return StreamBuilder<UserProfile?>(
               stream: ProfileService.instance.watchProfile(user.uid),
               builder: (context, profSnap) {
-                debugPrint('🔍 BootstrapGate: Profile connection state = ${profSnap.connectionState}');
+                debugPrint(
+                  '🔍 BootstrapGate: Profile connection state = ${profSnap.connectionState}',
+                );
 
                 if (profSnap.connectionState == ConnectionState.waiting) {
                   debugPrint('🔍 BootstrapGate: Waiting for profile...');
@@ -184,7 +203,9 @@ class _BootstrapGateState extends State<BootstrapGate> {
                   );
                 }
                 if (profSnap.hasError) {
-                  debugPrint('🔍 BootstrapGate: Profile error = ${profSnap.error}');
+                  debugPrint(
+                    '🔍 BootstrapGate: Profile error = ${profSnap.error}',
+                  );
                   return Scaffold(
                     body: Center(
                       child: Text('Profile load error: ${profSnap.error}'),
@@ -192,10 +213,14 @@ class _BootstrapGateState extends State<BootstrapGate> {
                   );
                 }
                 final profile = profSnap.data;
-                debugPrint('🔍 BootstrapGate: Profile = ${profile?.uid}, isComplete = ${profile?.isComplete}');
+                debugPrint(
+                  '🔍 BootstrapGate: Profile = ${profile?.uid}, isComplete = ${profile?.isComplete}',
+                );
 
                 if (profile == null || !profile.isComplete) {
-                  debugPrint('🔍 BootstrapGate: Profile incomplete, showing ProfileSetupPage');
+                  debugPrint(
+                    '🔍 BootstrapGate: Profile incomplete, showing ProfileSetupPage',
+                  );
                   return ProfileSetupPage(
                     profile:
                         profile ??
@@ -212,7 +237,9 @@ class _BootstrapGateState extends State<BootstrapGate> {
                         ),
                   );
                 }
-                debugPrint('🔍 BootstrapGate: Profile complete, showing AppShell');
+                debugPrint(
+                  '🔍 BootstrapGate: Profile complete, showing AppShell',
+                );
                 return const AppShell();
               },
             );

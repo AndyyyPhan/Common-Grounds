@@ -62,7 +62,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      backgroundColor: isDark
+          ? AppColors.backgroundDark
+          : AppColors.backgroundLight,
       body: SafeArea(
         child: Column(
           children: [
@@ -125,8 +127,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       color: _currentPage == index
                           ? AppColors.primary
                           : (isDark
-                              ? AppColors.textDisabledDark
-                              : AppColors.textDisabledLight),
+                                ? AppColors.textDisabledDark
+                                : AppColors.textDisabledLight),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -225,7 +227,8 @@ class _Slide3WaveAndConnect extends StatelessWidget {
       isDark: isDark,
       emoji: '👋',
       title: 'Wave & Connect',
-      subtitle: 'See someone interesting nearby? Send a wave and start chatting',
+      subtitle:
+          'See someone interesting nearby? Send a wave and start chatting',
       gradient1: const Color(0xFF29B6F6),
       gradient2: const Color(0xFF0288D1),
     );
@@ -267,13 +270,7 @@ Widget _buildSlide({
             ],
           ),
           child: Center(
-            child: Text(
-              emoji,
-              style: const TextStyle(
-                fontSize: 80,
-                height: 1,
-              ),
-            ),
+            child: Text(emoji, style: const TextStyle(fontSize: 80, height: 1)),
           ),
         ),
 
@@ -287,7 +284,9 @@ Widget _buildSlide({
             fontSize: 32,
             fontWeight: FontWeight.bold,
             height: 1.2,
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            color: isDark
+                ? AppColors.textPrimaryDark
+                : AppColors.textPrimaryLight,
             letterSpacing: -0.5,
           ),
         ),
@@ -301,7 +300,9 @@ Widget _buildSlide({
           style: TextStyle(
             fontSize: 17,
             height: 1.5,
-            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+            color: isDark
+                ? AppColors.textSecondaryDark
+                : AppColors.textSecondaryLight,
             fontWeight: FontWeight.w400,
           ),
         ),

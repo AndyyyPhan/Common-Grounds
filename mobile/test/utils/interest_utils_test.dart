@@ -24,8 +24,10 @@ void main() {
     });
 
     test('should capitalize custom interests not found', () {
-      expect(normalizeInterest('underwater basket weaving'),
-          'Underwater Basket Weaving');
+      expect(
+        normalizeInterest('underwater basket weaving'),
+        'Underwater Basket Weaving',
+      );
       expect(normalizeInterest('extreme ironing'), 'Extreme Ironing');
     });
 
@@ -56,33 +58,53 @@ void main() {
 
     test('should categorize academic keywords', () {
       expect(
-          categorizeCustomInterest('study group'), InterestCategory.academic);
-      expect(categorizeCustomInterest('research project'),
-          InterestCategory.academic);
-      expect(categorizeCustomInterest('code practice'),
-          InterestCategory.academic);
+        categorizeCustomInterest('study group'),
+        InterestCategory.academic,
+      );
+      expect(
+        categorizeCustomInterest('research project'),
+        InterestCategory.academic,
+      );
+      expect(
+        categorizeCustomInterest('code practice'),
+        InterestCategory.academic,
+      );
     });
 
     test('should categorize sports keywords', () {
-      expect(categorizeCustomInterest('exercise routine'), InterestCategory.sports);
+      expect(
+        categorizeCustomInterest('exercise routine'),
+        InterestCategory.sports,
+      );
       expect(categorizeCustomInterest('gym session'), InterestCategory.sports);
       expect(categorizeCustomInterest('running club'), InterestCategory.sports);
     });
 
     test('should categorize entertainment keywords', () {
-      expect(categorizeCustomInterest('video games'),
-          InterestCategory.entertainment);
-      expect(categorizeCustomInterest('watching movies'),
-          InterestCategory.entertainment);
-      expect(categorizeCustomInterest('streaming shows'),
-          InterestCategory.entertainment);
+      expect(
+        categorizeCustomInterest('video games'),
+        InterestCategory.entertainment,
+      );
+      expect(
+        categorizeCustomInterest('watching movies'),
+        InterestCategory.entertainment,
+      );
+      expect(
+        categorizeCustomInterest('streaming shows'),
+        InterestCategory.entertainment,
+      );
     });
 
     test('should categorize creative keywords', () {
       expect(categorizeCustomInterest('painting'), InterestCategory.creative);
       expect(
-          categorizeCustomInterest('music production'), InterestCategory.creative);
-      expect(categorizeCustomInterest('photography'), InterestCategory.creative);
+        categorizeCustomInterest('music production'),
+        InterestCategory.creative,
+      );
+      expect(
+        categorizeCustomInterest('photography'),
+        InterestCategory.creative,
+      );
     });
 
     test('should categorize social keywords', () {
@@ -92,12 +114,15 @@ void main() {
     });
 
     test('should categorize lifestyle keywords', () {
+      expect(categorizeCustomInterest('traveling'), InterestCategory.lifestyle);
       expect(
-          categorizeCustomInterest('traveling'), InterestCategory.lifestyle);
-      expect(categorizeCustomInterest('volunteering'),
-          InterestCategory.lifestyle);
+        categorizeCustomInterest('volunteering'),
+        InterestCategory.lifestyle,
+      );
       expect(
-          categorizeCustomInterest('outdoor activities'), InterestCategory.lifestyle);
+        categorizeCustomInterest('outdoor activities'),
+        InterestCategory.lifestyle,
+      );
     });
 
     test('should return null for unrecognized interests', () {
@@ -122,8 +147,12 @@ void main() {
       final grouped = groupInterestsByCategory(interests);
 
       expect(grouped[InterestCategory.sports]?.length, 4);
-      expect(grouped[InterestCategory.sports],
-          ['Basketball', 'Volleyball', 'Gym', 'Running']);
+      expect(grouped[InterestCategory.sports], [
+        'Basketball',
+        'Volleyball',
+        'Gym',
+        'Running',
+      ]);
     });
 
     test('should handle empty list', () {
@@ -155,8 +184,7 @@ void main() {
 
     test('should fail validation for empty list', () {
       expect(validateInterestSelection([]), isNotNull);
-      expect(
-          validateInterestSelection([]), contains('at least 5 interests'));
+      expect(validateInterestSelection([]), contains('at least 5 interests'));
     });
 
     test('should fail validation for less than 5 interests', () {
@@ -224,8 +252,11 @@ void main() {
       final allInterests = <String>[];
       for (final interests in kCategorizedInterests.values) {
         for (final interest in interests) {
-          expect(allInterests, isNot(contains(interest)),
-              reason: 'Duplicate interest: $interest');
+          expect(
+            allInterests,
+            isNot(contains(interest)),
+            reason: 'Duplicate interest: $interest',
+          );
           allInterests.add(interest);
         }
       }
@@ -262,8 +293,9 @@ void main() {
       expect(sportsInterests, contains('Basketball'));
       expect(sportsInterests, contains('Volleyball'));
 
-      final academicInterests =
-          getInterestsForCategory(InterestCategory.academic);
+      final academicInterests = getInterestsForCategory(
+        InterestCategory.academic,
+      );
       expect(academicInterests, contains('Coding'));
       expect(academicInterests, contains('Study Buddy'));
     });

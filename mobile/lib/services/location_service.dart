@@ -13,7 +13,7 @@ class LocationService {
   final _db = FirebaseFirestore.instance;
   Timer? _locationTimer;
   String? _currentUserId;
-  
+
   // When true, do not auto-update location from GPS/debug.
   // This is set when the user manually selects a location on the map.
   bool _manualOverrideActive = false;
@@ -67,14 +67,18 @@ class LocationService {
         debugPrint('🔒 Found saved profile location — using manual override');
         return true;
       }
-      debugPrint('📍 LocationService: No saved location found, will use device location');
+      debugPrint(
+        '📍 LocationService: No saved location found, will use device location',
+      );
     } catch (e) {
       debugPrint('⚠️ Error reading saved location: $e');
     }
 
     // If no saved coordinates, ensure location services are enabled and start
     // auto updates from device (coarse accuracy)
-    debugPrint('📍 LocationService: Checking if location services are enabled...');
+    debugPrint(
+      '📍 LocationService: Checking if location services are enabled...',
+    );
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       debugPrint('📍 LocationService: Location services are disabled');
@@ -132,7 +136,7 @@ class LocationService {
 
     try {
       Position position;
-      
+
       if (_useDebugOverride) {
         // Use debug coordinates for testing
         position = Position(
@@ -147,9 +151,11 @@ class LocationService {
           speed: 0.0,
           speedAccuracy: 0.0,
         );
-        
+
         if (kDebugMode) {
-          debugPrint('🔧 Using debug location: ${position.latitude}, ${position.longitude}');
+          debugPrint(
+            '🔧 Using debug location: ${position.latitude}, ${position.longitude}',
+          );
         }
       } else {
         // Get current position with low accuracy for privacy
@@ -284,7 +290,9 @@ class LocationService {
       );
 
       if (kDebugMode) {
-        debugPrint('🔧 ✅ Position created: ${position.latitude}, ${position.longitude}');
+        debugPrint(
+          '🔧 ✅ Position created: ${position.latitude}, ${position.longitude}',
+        );
         debugPrint('🔧 🌍 Converting to GeoFirePoint...');
       }
 

@@ -87,11 +87,7 @@ class _CountTab<T> extends StatelessWidget {
         return Tab(
           child: Row(
             mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon),
-              const SizedBox(width: 8),
-              Text(text),
-            ],
+            children: [Icon(icon), const SizedBox(width: 8), Text(text)],
           ),
         );
       },
@@ -645,9 +641,8 @@ class _MutualMatchesTab extends StatelessWidget {
                           maxLines: 1,
                           softWrap: false,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                       ),
                     ],

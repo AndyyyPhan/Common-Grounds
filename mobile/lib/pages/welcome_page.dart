@@ -15,7 +15,8 @@ class WelcomePage extends StatefulWidget {
   State<WelcomePage> createState() => _WelcomePageState();
 }
 
-class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStateMixin {
+class _WelcomePageState extends State<WelcomePage>
+    with SingleTickerProviderStateMixin {
   bool _loading = false;
   String? _error;
   late AnimationController _animationController;
@@ -35,13 +36,13 @@ class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStat
       curve: Curves.easeOut,
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     _animationController.forward();
   }
@@ -90,9 +91,9 @@ class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStat
     final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open link')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Could not open link')));
       }
     }
   }
@@ -111,14 +112,8 @@ class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStat
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: isDark
-                ? [
-                    const Color(0xFF1A1A1A),
-                    const Color(0xFF0D0D0D),
-                  ]
-                : [
-                    const Color(0xFFFAFAFA),
-                    const Color(0xFFFFFFFF),
-                  ],
+                ? [const Color(0xFF1A1A1A), const Color(0xFF0D0D0D)]
+                : [const Color(0xFFFAFAFA), const Color(0xFFFFFFFF)],
           ),
         ),
         child: SafeArea(
@@ -141,10 +136,7 @@ class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStat
                       duration: const Duration(milliseconds: 600),
                       curve: Curves.elasticOut,
                       builder: (context, value, child) {
-                        return Transform.scale(
-                          scale: value,
-                          child: child,
-                        );
+                        return Transform.scale(scale: value, child: child);
                       },
                       child: Container(
                         width: 120,
@@ -204,7 +196,9 @@ class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStat
                         height: 1.5,
                         color: isDark
                             ? AppColors.textSecondaryDark.withValues(alpha: 0.9)
-                            : AppColors.textSecondaryLight.withValues(alpha: 0.9),
+                            : AppColors.textSecondaryLight.withValues(
+                                alpha: 0.9,
+                              ),
                         fontWeight: FontWeight.w400,
                         letterSpacing: 0.2,
                       ),
@@ -291,7 +285,9 @@ class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStat
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
                               child: Text(
                                 'OR',
                                 style: TextStyle(
@@ -336,7 +332,9 @@ class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStat
                         label: 'Sign in with Apple',
                         backgroundColor: isDark ? Colors.white : Colors.black,
                         foregroundColor: isDark ? Colors.black : Colors.white,
-                        borderColor: isDark ? Colors.grey.shade300 : Colors.grey.shade800,
+                        borderColor: isDark
+                            ? Colors.grey.shade300
+                            : Colors.grey.shade800,
                         elevation: 3,
                       ),
 
@@ -345,8 +343,10 @@ class _WelcomePageState extends State<WelcomePage> with SingleTickerProviderStat
                     // Premium Terms and Privacy (Clickable)
                     _TermsAndPrivacy(
                       isDark: isDark,
-                      onTermsTap: () => _launchUrl('https://commongrounds.app/terms'),
-                      onPrivacyTap: () => _launchUrl('https://commongrounds.app/privacy'),
+                      onTermsTap: () =>
+                          _launchUrl('https://commongrounds.app/terms'),
+                      onPrivacyTap: () =>
+                          _launchUrl('https://commongrounds.app/privacy'),
                     ),
 
                     SizedBox(height: screenHeight * 0.06),
@@ -408,10 +408,7 @@ class _PremiumAuthButtonState extends State<_PremiumAuthButton> {
             foregroundColor: widget.foregroundColor,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: BorderSide(
-                color: widget.borderColor,
-                width: 1.5,
-              ),
+              side: BorderSide(color: widget.borderColor, width: 1.5),
             ),
             elevation: widget.elevation,
             shadowColor: Colors.black.withValues(alpha: 0.15),

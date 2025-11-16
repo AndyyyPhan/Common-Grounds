@@ -9,6 +9,7 @@ import '../services/profile_service.dart';
 import '../services/location_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/location_picker_page.dart';
+import '../widgets/search_radius_settings.dart';
 import 'profile_setup_page.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -163,6 +164,9 @@ class ProfilePage extends StatelessWidget {
                 const Divider(),
                 const SizedBox(height: 16),
                 _LocationSettings(profile: profile),
+                const SizedBox(height: 16),
+                // Search radius settings
+                SearchRadiusSettings(profile: profile),
                 const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 16),
@@ -240,12 +244,12 @@ class _LocationSettingsState extends State<_LocationSettings> {
     if (kDebugMode) {
       debugPrint('👤 ===== LOAD CURRENT COORDINATES STARTED =====');
     }
-    
+
     setState(() => _isLoadingCoordinates = true);
     try {
       // Get the saved location from the profile instead of GPS coordinates
       final location = widget.profile.location;
-      
+
       if (kDebugMode) {
         debugPrint('👤 📍 Profile location data:');
         debugPrint('👤   - Latitude: ${location?.latitude}');
@@ -253,7 +257,7 @@ class _LocationSettingsState extends State<_LocationSettings> {
         debugPrint('👤   - Last Updated: ${location?.lastUpdated}');
         debugPrint('👤   - Is Visible: ${location?.isVisible}');
       }
-      
+
       if (location?.latitude != null && location?.longitude != null) {
         if (kDebugMode) {
           debugPrint('👤 ✅ Found saved location coordinates, using those');
@@ -271,11 +275,13 @@ class _LocationSettingsState extends State<_LocationSettings> {
           speed: 0.0,
           speedAccuracy: 0.0,
         );
-        
+
         if (kDebugMode) {
-          debugPrint('👤 ✅ Created Position from saved coordinates: ${position.latitude}, ${position.longitude}');
+          debugPrint(
+            '👤 ✅ Created Position from saved coordinates: ${position.latitude}, ${position.longitude}',
+          );
         }
-        
+
         if (mounted) {
           setState(() {
             _currentPosition = position;
@@ -284,7 +290,9 @@ class _LocationSettingsState extends State<_LocationSettings> {
         }
       } else {
         if (kDebugMode) {
-          debugPrint('👤 ⚠️ No saved location found, falling back to GPS coordinates');
+          debugPrint(
+            '👤 ⚠️ No saved location found, falling back to GPS coordinates',
+          );
         }
         // Fallback to GPS coordinates if no saved location
         final hasPermission = await LocationService.instance
@@ -301,9 +309,11 @@ class _LocationSettingsState extends State<_LocationSettings> {
           });
         }
       }
-      
+
       if (kDebugMode) {
-        debugPrint('👤 📱 Final position set: ${_currentPosition?.latitude}, ${_currentPosition?.longitude}');
+        debugPrint(
+          '👤 📱 Final position set: ${_currentPosition?.latitude}, ${_currentPosition?.longitude}',
+        );
         debugPrint('👤 ===== LOAD CURRENT COORDINATES COMPLETED =====');
       }
     } catch (e) {
@@ -515,7 +525,9 @@ class _LocationSettingsState extends State<_LocationSettings> {
                                 await _loadCurrentCoordinates();
                                 messenger.showSnackBar(
                                   const SnackBar(
-                                    content: Text('Location reloaded from server'),
+                                    content: Text(
+                                      'Location reloaded from server',
+                                    ),
                                     duration: Duration(seconds: 2),
                                   ),
                                 );
@@ -549,24 +561,32 @@ class _LocationSettingsState extends State<_LocationSettings> {
                                 ),
                               ),
                             );
-                            
+
                             // Refresh the page after returning from map picker
                             if (result != null && mounted) {
                               if (kDebugMode) {
-                                debugPrint('👤 🔄 Location picker returned with result: $result');
+                                debugPrint(
+                                  '👤 🔄 Location picker returned with result: $result',
+                                );
                                 debugPrint('👤 🔄 Reloading coordinates...');
                               }
                               // Reload coordinates to show the updated location
                               await _loadCurrentCoordinates();
                             } else if (kDebugMode) {
-                              debugPrint('👤 ⚠️ Location picker returned with no result or widget not mounted');
+                              debugPrint(
+                                '👤 ⚠️ Location picker returned with no result or widget not mounted',
+                              );
                             }
                           },
                           icon: const Icon(Icons.map, size: 16),
                           label: const Text('Choose on Map'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).colorScheme.primary,
-                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primary,
+                            foregroundColor: Theme.of(
+                              context,
+                            ).colorScheme.onPrimary,
                           ),
                         ),
                       ),

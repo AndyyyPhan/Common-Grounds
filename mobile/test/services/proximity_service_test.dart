@@ -67,18 +67,23 @@ void main() {
       expect(profile.countInterestsInCategory(InterestCategory.academic), 2);
       expect(profile.countInterestsInCategory(InterestCategory.sports), 1);
       expect(profile.countInterestsInCategory(InterestCategory.social), 1);
-      expect(profile.countInterestsInCategory(InterestCategory.entertainment), 1);
+      expect(
+        profile.countInterestsInCategory(InterestCategory.entertainment),
+        1,
+      );
     });
 
-    test('profileCompleteness should calculate correctly for complete profile',
-        () {
-      final profile = _createCompleteProfile();
-      final completeness = profile.profileCompleteness;
+    test(
+      'profileCompleteness should calculate correctly for complete profile',
+      () {
+        final profile = _createCompleteProfile();
+        final completeness = profile.profileCompleteness;
 
-      // Complete profile should have high completeness score
-      expect(completeness, greaterThan(0.8));
-      expect(completeness, lessThanOrEqualTo(1.0));
-    });
+        // Complete profile should have high completeness score
+        expect(completeness, greaterThan(0.8));
+        expect(completeness, lessThanOrEqualTo(1.0));
+      },
+    );
 
     test('profileCompleteness should be lower for incomplete profile', () {
       final profile = _createIncompleteProfile();
@@ -93,8 +98,10 @@ void main() {
       final diverseProfile = _createProfileWithDiverseInterests();
       final narrowProfile = _createProfileWithNarrowInterests();
 
-      expect(diverseProfile.profileCompleteness,
-          greaterThan(narrowProfile.profileCompleteness));
+      expect(
+        diverseProfile.profileCompleteness,
+        greaterThan(narrowProfile.profileCompleteness),
+      );
     });
   });
 
@@ -112,11 +119,20 @@ void main() {
 
       // User2Academic should have match due to shared academic interests
       // User2Entertainment should have no match due to no overlap
-      expect(user1.interests.toSet().intersection(user2Academic.interests.toSet()).isNotEmpty,
-          isTrue);
       expect(
-          user1.interests.toSet().intersection(user2Entertainment.interests.toSet()).isEmpty,
-          isTrue);
+        user1.interests
+            .toSet()
+            .intersection(user2Academic.interests.toSet())
+            .isNotEmpty,
+        isTrue,
+      );
+      expect(
+        user1.interests
+            .toSet()
+            .intersection(user2Entertainment.interests.toSet())
+            .isEmpty,
+        isTrue,
+      );
     });
 
     test('should consider category distribution in matching', () {
@@ -175,7 +191,13 @@ UserProfile _createProfileWithCategories() {
     displayName: 'Category Test User',
     photoUrl: 'https://example.com/photo.jpg',
     bio: 'Test bio',
-    interests: const ['Coding', 'Study Buddy', 'Basketball', 'Coffee', 'Gaming'],
+    interests: const [
+      'Coding',
+      'Study Buddy',
+      'Basketball',
+      'Coffee',
+      'Gaming',
+    ],
     major: 'Computer Science',
     classYear: '2025',
     createdAt: now,

@@ -105,10 +105,9 @@ class AuthService {
       );
 
       // Create OAuth credential for Firebase
-      final oauthCredential = OAuthProvider('apple.com').credential(
-        idToken: appleCredential.identityToken,
-        rawNonce: rawNonce,
-      );
+      final oauthCredential = OAuthProvider(
+        'apple.com',
+      ).credential(idToken: appleCredential.identityToken, rawNonce: rawNonce);
 
       // Sign in to Firebase
       final userCredential = await _auth.signInWithCredential(oauthCredential);
@@ -118,8 +117,11 @@ class AuthService {
 
       // Update display name if this is a new user and Apple provided name info
       if (userCredential.additionalUserInfo?.isNewUser == true) {
-        final fullName = appleCredential.givenName != null || appleCredential.familyName != null
-            ? '${appleCredential.givenName ?? ''} ${appleCredential.familyName ?? ''}'.trim()
+        final fullName =
+            appleCredential.givenName != null ||
+                appleCredential.familyName != null
+            ? '${appleCredential.givenName ?? ''} ${appleCredential.familyName ?? ''}'
+                  .trim()
             : null;
 
         if (fullName != null && fullName.isNotEmpty) {
@@ -136,9 +138,13 @@ class AuthService {
 
   /// Generates a cryptographically secure random nonce for Apple Sign-In
   String _generateNonce([int length = 32]) {
-    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
     final random = Random.secure();
-    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+    return List.generate(
+      length,
+      (_) => charset[random.nextInt(charset.length)],
+    ).join();
   }
 
   /// Returns the sha256 hash of the input string

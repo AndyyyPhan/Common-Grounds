@@ -4,6 +4,7 @@ import 'dart:math';
 import 'dart:async';
 import 'package:mobile/models/user_profile.dart';
 import 'package:mobile/constants/interest_categories.dart';
+import 'package:mobile/constants/proximity_constants.dart';
 
 /// Service for finding nearby users with similar interests
 class ProximityService {
@@ -15,26 +16,28 @@ class ProximityService {
   // Caching for performance
   final Map<String, List<ProximityMatch>> _matchCache = {};
   final Map<String, DateTime> _cacheTimestamps = {};
-  static const Duration _cacheExpiry = Duration(minutes: 5);
-  static const double maxDistanceKmFinal = .1;
+  static const Duration _cacheExpiry = kMatchCacheExpiry;
 
   /// Find nearby users with similar interests
   ///
   /// Parameters:
   /// - currentUserProfile: The current user's profile
-  /// - maxDistanceKm: Maximum distance in kilometers (default: 5km)
+  /// - maxDistanceKm: Maximum distance in kilometers (uses user's preference if not specified)
   /// - minCommonInterests: Minimum number of common interests required (default: 1)
   /// - limit: Maximum number of results to return (default: 10)
   Future<List<ProximityMatch>> findNearbyMatches(
     UserProfile currentUserProfile, {
-    double maxDistanceKm = maxDistanceKmFinal,
-    int minCommonInterests = 1,
-    int limit = 10,
+    double? maxDistanceKm,
+    int minCommonInterests = kMinCommonInterests,
+    int limit = kDefaultResultLimit,
   }) async {
+    // Use user's preferred search radius if not explicitly provided
+    final searchRadius =
+        maxDistanceKm ?? currentUserProfile.effectiveSearchRadiusKm;
     try {
       // Check cache first
       final cacheKey =
-          '${currentUserProfile.uid}_${maxDistanceKm}_$minCommonInterests';
+          '${currentUserProfile.uid}_${searchRadius}_$minCommonInterests';
       final cachedMatches = _getCachedMatches(cacheKey);
       if (cachedMatches != null) {
         debugPrint('🚀 Using cached matches: ${cachedMatches.length} results');
@@ -61,10 +64,7 @@ class ProximityService {
       }
 
       // Get nearby geohashes (expanded search area)
-      final nearbyGeohashes = _getNearbyGeohashes(
-        currentGeohash,
-        maxDistanceKm,
-      );
+      final nearbyGeohashes = _getNearbyGeohashes(currentGeohash, searchRadius);
 
       debugPrint('🔍 PROXIMITY SEARCH STARTED');
       debugPrint('📍 Current user: ${currentUserProfile.displayName}');
@@ -112,7 +112,7 @@ class ProximityService {
           );
 
           // Filter by distance
-          if (distance > maxDistanceKm) continue;
+          if (distance > searchRadius) continue;
 
           // OPTIMIZED: Fast interest matching using sets
           final commonInterests = _getCommonInterestsOptimized(
@@ -179,7 +179,7 @@ class ProximityService {
             );
 
             // Filter by distance (more lenient for broad search)
-            if (distance > maxDistanceKm * 2) continue;
+            if (distance > searchRadius * 2) continue;
 
             // OPTIMIZED: Fast interest matching using sets
             final commonInterests = _getCommonInterestsOptimized(
@@ -387,7 +387,10 @@ class ProximityService {
       }
 
       // Calculate Overlap Coefficient for this category
-      final categoryScore = _calculateOverlapCoefficient(interests1, interests2);
+      final categoryScore = _calculateOverlapCoefficient(
+        interests1,
+        interests2,
+      );
 
       // Weight by category importance
       final categoryWeight = kCategoryWeights[category] ?? 0.0;
@@ -433,9 +436,9 @@ class ProximityService {
   /// Stream of nearby matches (real-time updates) - OPTIMIZED
   Stream<List<ProximityMatch>> watchNearbyMatches(
     UserProfile currentUserProfile, {
-    double maxDistanceKm = maxDistanceKmFinal,
-    int minCommonInterests = 1,
-    int limit = 10,
+    double? maxDistanceKm,
+    int minCommonInterests = kMinCommonInterests,
+    int limit = kDefaultResultLimit,
   }) {
     // Create a controller for immediate start
     final controller = StreamController<List<ProximityMatch>>();
@@ -502,13 +505,17 @@ class ProximityService {
   /// Force refresh matches (bypasses cache)
   Future<List<ProximityMatch>> refreshMatches(
     UserProfile currentUserProfile, {
-    double maxDistanceKm = maxDistanceKmFinal,
-    int minCommonInterests = 1,
-    int limit = 10,
+    double? maxDistanceKm,
+    int minCommonInterests = kMinCommonInterests,
+    int limit = kDefaultResultLimit,
   }) async {
+    // Use user's preferred search radius if not explicitly provided
+    final searchRadius =
+        maxDistanceKm ?? currentUserProfile.effectiveSearchRadiusKm;
+
     // Clear cache for this user to force fresh search
     final cacheKey =
-        '${currentUserProfile.uid}_${maxDistanceKm}_$minCommonInterests';
+        '${currentUserProfile.uid}_${searchRadius}_$minCommonInterests';
     _matchCache.remove(cacheKey);
     _cacheTimestamps.remove(cacheKey);
 

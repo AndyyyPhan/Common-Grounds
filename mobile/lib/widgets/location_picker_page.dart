@@ -31,7 +31,8 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
   void initState() {
     super.initState();
     // Set initial location if provided, otherwise use default
-    _selectedLocation = widget.initialLatitude != null && widget.initialLongitude != null
+    _selectedLocation =
+        widget.initialLatitude != null && widget.initialLongitude != null
         ? LatLng(widget.initialLatitude!, widget.initialLongitude!)
         : null;
     _selectedAddress = widget.initialAddress;
@@ -89,7 +90,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
             child: Text(
               'Save',
               style: TextStyle(
-                color: _isLoading 
+                color: _isLoading
                     ? Theme.of(context).disabledColor
                     : Theme.of(context).colorScheme.primary,
                 fontWeight: FontWeight.bold,
@@ -255,16 +256,20 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
 
   void _onMapTapped(LatLng location) {
     if (kDebugMode) {
-      debugPrint('🗺️ Map tapped at: ${location.latitude}, ${location.longitude}');
+      debugPrint(
+        '🗺️ Map tapped at: ${location.latitude}, ${location.longitude}',
+      );
     }
-    
+
     setState(() {
       _selectedLocation = location;
       _selectedAddress = null; // Clear address, will be fetched if needed
     });
 
     if (kDebugMode) {
-      debugPrint('🗺️ Pin placed at: ${_selectedLocation!.latitude}, ${_selectedLocation!.longitude}');
+      debugPrint(
+        '🗺️ Pin placed at: ${_selectedLocation!.latitude}, ${_selectedLocation!.longitude}',
+      );
     }
 
     // Optional: Fetch address for the selected location
@@ -275,7 +280,8 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     // For now, we'll just show coordinates
     // In a real app, you might want to use Google Geocoding API
     setState(() {
-      _selectedAddress = 'Location: ${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)}';
+      _selectedAddress =
+          'Location: ${location.latitude.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)}';
     });
   }
 
@@ -283,7 +289,7 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     if (kDebugMode) {
       debugPrint('🗺️ ===== SAVE LOCATION STARTED =====');
     }
-    
+
     if (_selectedLocation == null) {
       if (kDebugMode) {
         debugPrint('🗺️ ❌ No location selected - showing error');
@@ -295,7 +301,9 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
     }
 
     if (kDebugMode) {
-      debugPrint('🗺️ ✅ Save button pressed with location: ${_selectedLocation!.latitude}, ${_selectedLocation!.longitude}');
+      debugPrint(
+        '🗺️ ✅ Save button pressed with location: ${_selectedLocation!.latitude}, ${_selectedLocation!.longitude}',
+      );
     }
 
     setState(() {
@@ -307,14 +315,16 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
       if (kDebugMode) {
         debugPrint('🗺️ 📞 Calling LocationService.setCustomLocation...');
       }
-      
+
       await LocationService.instance.setCustomLocation(
         _selectedLocation!.latitude,
         _selectedLocation!.longitude,
       );
 
       if (kDebugMode) {
-        debugPrint('🗺️ ✅ LocationService.setCustomLocation completed successfully');
+        debugPrint(
+          '🗺️ ✅ LocationService.setCustomLocation completed successfully',
+        );
       }
 
       if (mounted) {

@@ -22,6 +22,7 @@ import '../services/wave_service.dart';
 import '../models/user_profile.dart';
 import '../models/wave_models.dart';
 import '../utils/chat_utils.dart';
+import '../constants/proximity_constants.dart';
 import 'profile_setup_page.dart';
 
 class HomePage extends StatelessWidget {
@@ -80,6 +81,10 @@ class HomePage extends StatelessWidget {
 
                   // Quick stats (live counts)
                   _buildQuickStats(context, user.uid),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // Search radius indicator
+                  _buildRadiusIndicator(context, profile),
                   const SizedBox(height: AppSpacing.xl),
 
                   // Quick actions
@@ -201,6 +206,47 @@ class HomePage extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  /// Search radius indicator
+  Widget _buildRadiusIndicator(BuildContext context, UserProfile profile) {
+    final radius = profile.effectiveSearchRadiusKm;
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.info.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppColors.info.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.radar, size: 16, color: AppColors.info),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            'Searching within ${formatRadius(radius)}',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: AppColors.info,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Icon(
+            Icons.settings_outlined,
+            size: 14,
+            color: AppColors.info.withValues(alpha: 0.7),
+          ),
+        ],
+      ),
     );
   }
 
@@ -775,9 +821,8 @@ class HomePage extends StatelessWidget {
                     children: [
                       Text(
                         'Common interests with ${match.userProfile.displayName}',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
                       ),
                       Text(
                         '${match.commonInterests.length} shared interests',

@@ -70,9 +70,9 @@ class _LocationTestWidgetState extends State<LocationTestWidget> {
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Location set to: $lat, $lng')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Location set to: $lat, $lng')));
 
     // Refresh current location display
     await _loadCurrentLocation();
@@ -102,19 +102,25 @@ class _LocationTestWidgetState extends State<LocationTestWidget> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Current Location Display
             if (_currentPosition != null) ...[
-              const Text('Current Location:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                'Current Location:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               Text('Lat: ${_currentPosition!.latitude.toStringAsFixed(6)}'),
               Text('Lng: ${_currentPosition!.longitude.toStringAsFixed(6)}'),
               const SizedBox(height: 16),
             ],
 
             // Custom Location Input
-            const Text('Set Custom Location:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Set Custom Location:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
-            
+
             Row(
               children: [
                 Expanded(
@@ -125,7 +131,9 @@ class _LocationTestWidgetState extends State<LocationTestWidget> {
                       hintText: '38.031994',
                       border: OutlineInputBorder(),
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -137,14 +145,16 @@ class _LocationTestWidgetState extends State<LocationTestWidget> {
                       hintText: '-78.510683',
                       border: OutlineInputBorder(),
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                   ),
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // Action Buttons
             Row(
               children: [
@@ -165,18 +175,25 @@ class _LocationTestWidgetState extends State<LocationTestWidget> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 8),
-            
+
             // Quick Location Buttons
-            const Text('Quick Locations:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Quick Locations:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
-            
+
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                _buildQuickLocationButton('Your Location', 38.03199384346889, -78.51068317176542),
+                _buildQuickLocationButton(
+                  'Your Location',
+                  38.03199384346889,
+                  -78.51068317176542,
+                ),
                 _buildQuickLocationButton('Google HQ', 37.4220936, -122.083922),
                 _buildQuickLocationButton('Times Square', 40.7580, -73.9855),
                 _buildQuickLocationButton('Golden Gate', 37.8199, -122.4783),
