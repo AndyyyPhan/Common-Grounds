@@ -383,23 +383,26 @@ class HomePage extends StatelessWidget {
             ),
           )
         else
-          // Show real matched students
+          // Show real matched students (excluding mutual matches)
           StreamBuilder<List<ProximityMatch>>(
             stream: ProximityService.instance.watchNearbyMatches(profile),
-            builder: (context, snapshot) {
+            builder: (context, proximitySnapshot) {
               print('🏠 HOME PAGE: StreamBuilder triggered');
               print(
-                '🏠 HOME PAGE: Connection state: ${snapshot.connectionState}',
+                '🏠 HOME PAGE: Connection state: ${proximitySnapshot.connectionState}',
               );
-              print('🏠 HOME PAGE: Has data: ${snapshot.hasData}');
-              print('🏠 HOME PAGE: Has error: ${snapshot.hasError}');
-              if (snapshot.hasError) {
-                print('🏠 HOME PAGE: Error: ${snapshot.error}');
+              print('🏠 HOME PAGE: Has data: ${proximitySnapshot.hasData}');
+              print('🏠 HOME PAGE: Has error: ${proximitySnapshot.hasError}');
+              if (proximitySnapshot.hasError) {
+                print('🏠 HOME PAGE: Error: ${proximitySnapshot.error}');
               }
-              if (snapshot.hasData) {
-                print('🏠 HOME PAGE: Matches count: ${snapshot.data!.length}');
+              if (proximitySnapshot.hasData) {
+                print(
+                  '🏠 HOME PAGE: Matches count: ${proximitySnapshot.data!.length}',
+                );
               }
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              if (proximitySnapshot.connectionState ==
+                  ConnectionState.waiting) {
                 return AppCard(
                   padding: AppSpacing.lg,
                   child: Column(
@@ -416,98 +419,124 @@ class HomePage extends StatelessWidget {
                 );
               }
 
-              final matches = snapshot.data ?? [];
+              // Get mutual matches to filter them out
+              return StreamBuilder<List<MutualMatch>>(
+                stream: WaveService.instance.watchMutualMatches(profile.uid),
+                builder: (context, mutualSnapshot) {
+                  final proximityMatches = proximitySnapshot.data ?? [];
+                  final mutualMatches = mutualSnapshot.data ?? [];
 
-              if (matches.isEmpty) {
-                return AppCard(
-                  padding: AppSpacing.lg,
-                  child: Column(
+                  // Create a set of mutual match user IDs for O(1) lookup
+                  final mutualUserIds = mutualMatches
+                      .map((m) => m.getOtherUserId(profile.uid))
+                      .toSet();
+
+                  // Filter out mutual matches from proximity matches
+                  final matches = proximityMatches
+                      .where(
+                        (match) =>
+                            !mutualUserIds.contains(match.userProfile.uid),
+                      )
+                      .toList();
+
+                  print(
+                    '🏠 HOME PAGE: Filtered ${proximityMatches.length - matches.length} mutual matches',
+                  );
+
+                  if (matches.isEmpty) {
+                    return AppCard(
+                      padding: AppSpacing.lg,
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            size: 64,
+                            color: AppColors.primary.withValues(alpha: 0.3),
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            'No nearby matches found',
+                            style: Theme.of(context).textTheme.titleMedium,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          Text(
+                            'Try refreshing your location or adding more interests',
+                            style: Theme.of(context).textTheme.bodySmall,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          FilledButton.icon(
+                            onPressed: () async {
+                              await LocationService.instance.refreshLocation();
+                            },
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Refresh Location'),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          FilledButton.icon(
+                            onPressed: () async {
+                              final messenger = ScaffoldMessenger.of(context);
+                              print(
+                                '🧪 TEST: Manually triggering proximity search',
+                              );
+                              print(
+                                '🧪 TEST: Current profile: ${profile.displayName}',
+                              );
+                              print(
+                                '🧪 TEST: Location visible: ${profile.location?.isVisible}',
+                              );
+                              print(
+                                '🧪 TEST: Location coords: ${profile.location?.latitude}, ${profile.location?.longitude}',
+                              );
+                              print('🧪 TEST: Interests: ${profile.interests}');
+                              final matches = await ProximityService.instance
+                                  .refreshMatches(profile);
+                              print('🧪 TEST: Found ${matches.length} matches');
+                              if (context.mounted) {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Test: Found ${matches.length} matches',
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.bug_report),
+                            label: const Text('Test Search'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return Column(
                     children: [
-                      Icon(
-                        Icons.search_off,
-                        size: 64,
-                        color: AppColors.primary.withValues(alpha: 0.3),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      Text(
-                        'No nearby matches found',
-                        style: Theme.of(context).textTheme.titleMedium,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        'Try refreshing your location or adding more interests',
-                        style: Theme.of(context).textTheme.bodySmall,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      FilledButton.icon(
-                        onPressed: () async {
-                          await LocationService.instance.refreshLocation();
-                        },
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Refresh Location'),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      FilledButton.icon(
-                        onPressed: () async {
-                          final messenger = ScaffoldMessenger.of(context);
-                          print(
-                            '🧪 TEST: Manually triggering proximity search',
-                          );
-                          print(
-                            '🧪 TEST: Current profile: ${profile.displayName}',
-                          );
-                          print(
-                            '🧪 TEST: Location visible: ${profile.location?.isVisible}',
-                          );
-                          print(
-                            '🧪 TEST: Location coords: ${profile.location?.latitude}, ${profile.location?.longitude}',
-                          );
-                          print('🧪 TEST: Interests: ${profile.interests}');
-                          final matches = await ProximityService.instance
-                              .refreshMatches(profile);
-                          print('🧪 TEST: Found ${matches.length} matches');
-                          if (context.mounted) {
-                            messenger.showSnackBar(
+                      for (final match in matches.take(3)) // Show top 3 matches
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: _buildMatchCard(context, match),
+                        ),
+                      if (matches.length > 3)
+                        TextButton(
+                          onPressed: () {
+                            // TODO: Navigate to full matches list
+                            ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  'Test: Found ${matches.length} matches',
+                                  '${matches.length - 3} more matches available',
                                 ),
                               ),
                             );
-                          }
-                        },
-                        icon: const Icon(Icons.bug_report),
-                        label: const Text('Test Search'),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              return Column(
-                children: [
-                  for (final match in matches.take(3)) // Show top 3 matches
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: _buildMatchCard(context, match),
-                    ),
-                  if (matches.length > 3)
-                    TextButton(
-                      onPressed: () {
-                        // TODO: Navigate to full matches list
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              '${matches.length - 3} more matches available',
-                            ),
+                          },
+                          child: Text(
+                            'View ${matches.length - 3} more matches',
                           ),
-                        );
-                      },
-                      child: Text('View ${matches.length - 3} more matches'),
-                    ),
-                ],
+                        ),
+                    ],
+                  );
+                },
               );
             },
           ),
@@ -569,7 +598,7 @@ class HomePage extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Icon(
-                        Icons.favorite,
+                        Icons.interests,
                         size: 12,
                         color: AppColors.textSecondaryLight,
                       ),

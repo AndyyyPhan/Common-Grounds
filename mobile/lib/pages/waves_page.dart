@@ -33,7 +33,6 @@ class WavesPage extends StatelessWidget {
         appBar: AppBar(
           title: const Text('Waves'),
           bottom: TabBar(
-            isScrollable: true,
             tabs: [
               _CountTab<WaveRequest>(
                 label: 'Received',
@@ -47,7 +46,7 @@ class WavesPage extends StatelessWidget {
               ),
               _CountTab<MutualMatch>(
                 label: 'Matched',
-                icon: Icons.favorite,
+                icon: Icons.handshake,
                 stream: WaveService.instance.watchMutualMatches(user.uid),
               ),
             ],
@@ -87,7 +86,11 @@ class _CountTab<T> extends StatelessWidget {
         return Tab(
           child: Row(
             mainAxisSize: MainAxisSize.min,
-            children: [Icon(icon), const SizedBox(width: 8), Text(text)],
+            children: [
+              Icon(icon, size: 20),
+              const SizedBox(width: 4),
+              Text(text),
+            ],
           ),
         );
       },
@@ -322,9 +325,9 @@ class _MatchCelebrationDialogState extends State<_MatchCelebrationDialog>
                     return Transform.scale(
                       scale: value,
                       child: const Icon(
-                        Icons.favorite,
+                        Icons.handshake,
                         size: 64,
-                        color: AppColors.error,
+                        color: AppColors.success,
                       ),
                     );
                   },
@@ -575,7 +578,7 @@ class _MutualMatchesTab extends StatelessWidget {
 
         if (matches.isEmpty) {
           return const EmptyState(
-            icon: Icons.favorite_outline,
+            icon: Icons.handshake_outlined,
             title: 'No matches yet',
             message:
                 'When you both wave at each other, you\'ll match and can start chatting!',
@@ -630,9 +633,9 @@ class _MutualMatchesTab extends StatelessWidget {
                   Row(
                     children: [
                       const Icon(
-                        Icons.favorite,
+                        Icons.handshake,
                         size: 16,
-                        color: AppColors.error,
+                        color: AppColors.success,
                       ),
                       const SizedBox(width: 4),
                       Expanded(

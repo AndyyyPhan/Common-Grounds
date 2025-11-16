@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { setGlobalOptions } from 'firebase-functions/v2';
 import * as admin from 'firebase-admin';
 
@@ -358,3 +359,128 @@ export const getUserProfile = onCall(
     }
   }
 );
+
+/**
+ * Cloud Function to detect mutual matches and send notifications
+ * Triggers when a wave document is created or updated
+ */
+export const onWaveCreated = onDocumentCreated(
+  { document: 'waves/{waveId}', region: 'us-central1' },
+  async (event) => {
+    const waveData = event.data?.data();
+    if (!waveData) return;
+
+    const { senderId, receiverId, status } = waveData;
+
+    // Only process pending waves (new waves)
+    if (status !== 'pending') return;
+
+    console.log(`🌊 New wave from ${senderId} to ${receiverId}`);
+
+    try {
+      const db = admin.firestore();
+
+      // Check if there's a reverse wave (receiver -> sender)
+      const reverseWaveQuery = await db
+        .collection('waves')
+        .where('senderId', '==', receiverId)
+        .where('receiverId', '==', senderId)
+        .where('status', '==', 'pending')
+        .limit(1)
+        .get();
+
+      if (reverseWaveQuery.empty) {
+        console.log('No reverse wave found - not a mutual match yet');
+        return;
+      }
+
+      console.log('🎉 MUTUAL MATCH DETECTED!');
+
+      // Get both user profiles for notification
+      const [senderDoc, receiverDoc] = await Promise.all([
+        db.collection('users').doc(senderId).get(),
+        db.collection('users').doc(receiverId).get(),
+      ]);
+
+      if (!senderDoc.exists || !receiverDoc.exists) {
+        console.error('User profile not found');
+        return;
+      }
+
+      const senderProfile = senderDoc.data();
+      const receiverProfile = receiverDoc.data();
+
+      // Send notifications to both users
+      await Promise.all([
+        sendMatchNotification(
+          receiverProfile?.fcmToken,
+          senderProfile?.displayName || 'Someone',
+          receiverId
+        ),
+        sendMatchNotification(
+          senderProfile?.fcmToken,
+          receiverProfile?.displayName || 'Someone',
+          senderId
+        ),
+      ]);
+
+      console.log('✅ Match notifications sent successfully');
+    } catch (error) {
+      console.error('Error processing mutual match:', error);
+    }
+  }
+);
+
+/**
+ * Helper function to send a match notification via FCM
+ */
+async function sendMatchNotification(
+  fcmToken: string | undefined,
+  matchedUserName: string,
+  userId: string
+): Promise<void> {
+  if (!fcmToken) {
+    console.log(`No FCM token for user ${userId}, skipping notification`);
+    return;
+  }
+
+  try {
+    const message = {
+      token: fcmToken,
+      notification: {
+        title: '🤝 New Match!',
+        body: `You and ${matchedUserName} are now connected!`,
+      },
+      data: {
+        type: 'mutual_match',
+        matchedUserName,
+        click_action: 'FLUTTER_NOTIFICATION_CLICK',
+        route: '/waves',
+        tab: 'matched',
+      },
+      android: {
+        priority: 'high' as const,
+        notification: {
+          channelId: 'matches',
+          sound: 'default',
+          priority: 'high' as const,
+          icon: 'ic_notification',
+          color: '#4CAF50', // Green color for friendship
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: 'default',
+            badge: 1,
+          },
+        },
+      },
+    };
+
+    await admin.messaging().send(message);
+    console.log(`✅ Notification sent to ${userId}`);
+  } catch (error) {
+    console.error(`Error sending notification to ${userId}:`, error);
+  }
+}
