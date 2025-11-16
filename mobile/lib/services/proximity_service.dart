@@ -342,8 +342,8 @@ class ProximityService {
   /// Match score is based on:
   /// - Interest similarity (80% weight)
   /// - Vibe/personality compatibility (20% weight)
-  /// - Profile quality multiplier
   /// Distance is used only for filtering (radius), not scoring
+  /// Profile completeness affects visibility/ranking, NOT match score
   double _calculateCategoryWeightedMatchScore(
     UserProfile currentUser,
     UserProfile otherUser,
@@ -361,17 +361,11 @@ class ProximityService {
       otherUser.vibeTags,
     );
 
-    // 3. Combine scores with weighted average
+    // 3. Final score: weighted average of interest and vibe compatibility
     // Interest similarity: 80%, Vibe compatibility: 20%
-    final combinedScore = (interestScore * 0.8) + (vibeScore * 0.2);
-
-    // 4. Profile quality multiplier (encourages complete profiles)
-    final qualityMultiplier =
-        (currentUser.profileCompleteness + otherUser.profileCompleteness) / 2;
-
-    // 5. Final score: combined similarity scaled by profile quality
-    // Distance is NOT included in match score - used only for filtering
-    return combinedScore * qualityMultiplier;
+    // Profile completeness is NOT included - it only affects visibility
+    // This matches industry standards (Bumble, Hinge, Tinder)
+    return (interestScore * 0.8) + (vibeScore * 0.2);
   }
 
   /// Calculate weighted Overlap Coefficient similarity per category

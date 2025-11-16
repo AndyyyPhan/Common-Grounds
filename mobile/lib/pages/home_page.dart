@@ -693,8 +693,9 @@ class HomePage extends StatelessWidget {
                           currentUserProfile.vibeTags,
                           user.vibeTags,
                         );
-                        if (commonVibeTags.isEmpty)
+                        if (commonVibeTags.isEmpty) {
                           return const SizedBox.shrink();
+                        }
 
                         return Row(
                           children: [
