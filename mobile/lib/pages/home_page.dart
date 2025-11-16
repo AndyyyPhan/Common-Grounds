@@ -23,6 +23,7 @@ import '../models/user_profile.dart';
 import '../models/wave_models.dart';
 import '../utils/chat_utils.dart';
 import '../constants/proximity_constants.dart';
+import '../constants/vibe_tags.dart';
 import 'profile_setup_page.dart';
 
 class HomePage extends StatelessWidget {
@@ -516,7 +517,7 @@ class HomePage extends StatelessWidget {
                       for (final match in matches.take(3)) // Show top 3 matches
                         Padding(
                           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                          child: _buildMatchCard(context, match),
+                          child: _buildMatchCard(context, match, profile),
                         ),
                       if (matches.length > 3)
                         TextButton(
@@ -545,7 +546,11 @@ class HomePage extends StatelessWidget {
   }
 
   /// Build a match card for displaying a proximity match
-  Widget _buildMatchCard(BuildContext context, ProximityMatch match) {
+  Widget _buildMatchCard(
+    BuildContext context,
+    ProximityMatch match,
+    UserProfile currentUserProfile,
+  ) {
     final user = match.userProfile;
     final currentUser = FirebaseAuth.instance.currentUser;
 
@@ -678,6 +683,46 @@ class HomePage extends StatelessWidget {
                       ],
                     ),
                   ),
+                  // Vibe tags - show common personality tags
+                  if (currentUserProfile.vibeTags.isNotEmpty &&
+                      user.vibeTags.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Builder(
+                      builder: (context) {
+                        final commonVibeTags = VibeTags.getCommonTags(
+                          currentUserProfile.vibeTags,
+                          user.vibeTags,
+                        );
+                        if (commonVibeTags.isEmpty)
+                          return const SizedBox.shrink();
+
+                        return Row(
+                          children: [
+                            Text(
+                              '✨',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                commonVibeTags
+                                    .take(3)
+                                    .map((tag) => tag.displayText)
+                                    .join(' • '),
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: AppColors.secondary,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
                 ],
               ),
             ),

@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:mobile/models/user_profile.dart';
 import 'package:mobile/constants/interest_categories.dart';
 import 'package:mobile/constants/proximity_constants.dart';
+import 'package:mobile/constants/vibe_tags.dart';
 
 /// Service for finding nearby users with similar interests
 class ProximityService {
@@ -338,26 +339,39 @@ class ProximityService {
 
   /// Calculate category-weighted match score between two complete user profiles
   /// This is the primary matching algorithm for full profile comparisons
-  /// Match score is purely based on interest similarity, NOT distance
+  /// Match score is based on:
+  /// - Interest similarity (80% weight)
+  /// - Vibe/personality compatibility (20% weight)
+  /// - Profile quality multiplier
   /// Distance is used only for filtering (radius), not scoring
   double _calculateCategoryWeightedMatchScore(
     UserProfile currentUser,
     UserProfile otherUser,
     double distanceKm,
   ) {
-    // 1. Calculate category-weighted interest similarity
+    // 1. Calculate category-weighted interest similarity (0-1)
     final interestScore = _calculateCategoryWeightedSimilarity(
       currentUser,
       otherUser,
     );
 
-    // 2. Profile quality multiplier (encourages complete profiles)
+    // 2. Calculate vibe/personality compatibility (0-1)
+    final vibeScore = VibeTags.calculateCompatibility(
+      currentUser.vibeTags,
+      otherUser.vibeTags,
+    );
+
+    // 3. Combine scores with weighted average
+    // Interest similarity: 80%, Vibe compatibility: 20%
+    final combinedScore = (interestScore * 0.8) + (vibeScore * 0.2);
+
+    // 4. Profile quality multiplier (encourages complete profiles)
     final qualityMultiplier =
         (currentUser.profileCompleteness + otherUser.profileCompleteness) / 2;
 
-    // 3. Final score: pure interest similarity scaled by profile quality
+    // 5. Final score: combined similarity scaled by profile quality
     // Distance is NOT included in match score - used only for filtering
-    return interestScore * qualityMultiplier;
+    return combinedScore * qualityMultiplier;
   }
 
   /// Calculate weighted Overlap Coefficient similarity per category

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mobile/constants/interest_categories.dart';
 import 'package:mobile/constants/proximity_constants.dart';
+import 'package:mobile/constants/vibe_tags.dart';
 import 'package:mobile/utils/interest_utils.dart';
 
 class UserProfile {
@@ -11,6 +12,7 @@ class UserProfile {
   final String? classYear; // e.g., "2026"
   final String? major; // e.g., "CS"
   final List<String> interests;
+  final List<String> vibeTags; // Personality/vibe tags for better matching
   final DateTime createdAt;
   final DateTime updatedAt;
   final UserLocation? location;
@@ -24,6 +26,7 @@ class UserProfile {
     this.classYear,
     this.major,
     this.interests = const [],
+    this.vibeTags = const [],
     required this.createdAt,
     required this.updatedAt,
     this.location,
@@ -67,6 +70,15 @@ class UserProfile {
       score += 0.20 * (categories / 3);
     }
 
+    // Vibe tags bonus (30% boost for personality matching)
+    if (vibeTags.length >= VibeTags.minRecommendedTags) {
+      score += VibeTags.profileCompletionBoost;
+    } else if (vibeTags.isNotEmpty) {
+      score +=
+          VibeTags.profileCompletionBoost *
+          (vibeTags.length / VibeTags.minRecommendedTags);
+    }
+
     return score.clamp(0.0, 1.0);
   }
 
@@ -94,6 +106,7 @@ class UserProfile {
     'classYear': classYear,
     'major': major,
     'interests': interests,
+    'vibeTags': vibeTags,
     'createdAt': createdAt.millisecondsSinceEpoch,
     'updatedAt': updatedAt.millisecondsSinceEpoch,
     if (location != null) 'location': location!.toMap(),
@@ -116,6 +129,7 @@ class UserProfile {
       classYear: m['classYear'] as String?,
       major: m['major'] as String?,
       interests: (m['interests'] as List?)?.cast<String>() ?? const [],
+      vibeTags: (m['vibeTags'] as List?)?.cast<String>() ?? const [],
       createdAt: DateTime.fromMillisecondsSinceEpoch(
         m['createdAt'] as int? ?? 0,
       ),

@@ -7,6 +7,7 @@ import 'package:mobile/models/user_profile.dart';
 import 'package:mobile/services/profile_service.dart';
 import 'package:mobile/core/widgets/avatar.dart';
 import 'package:mobile/constants/interest_categories.dart';
+import 'package:mobile/constants/vibe_tags.dart';
 import 'package:mobile/utils/interest_utils.dart';
 
 class ProfileSetupPage extends StatefulWidget {
@@ -24,9 +25,11 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   late final TextEditingController _classYear;
   late final TextEditingController _customInterest;
   late Set<String> _interests;
+  late Set<String> _vibeTags;
   bool _saving = false;
   String? _error;
   bool _showCustomInterestField = false;
+  bool _showVibeTags = false; // Collapsible vibe tag section
   File? _newProfileImage; // New image selected from gallery/camera
   String? _profileImageUrl; // Current image URL from profile
 
@@ -45,6 +48,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     _classYear = TextEditingController(text: widget.profile.classYear ?? '');
     _customInterest = TextEditingController();
     _interests = widget.profile.interests.toSet();
+    _vibeTags = widget.profile.vibeTags.toSet();
     _profileImageUrl = widget.profile.photoUrl;
   }
 
@@ -201,6 +205,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
             : _classYear.text.trim(),
         major: _major.text.trim().isEmpty ? null : _major.text.trim(),
         interests: _interests.toList()..sort(),
+        vibeTags: _vibeTags.toList(),
         createdAt: widget.profile.createdAt,
         updatedAt: DateTime.now(),
       );
@@ -511,6 +516,108 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
               ),
             ],
             const SizedBox(height: 24),
+
+            // Vibe Tags Section (Optional)
+            Card(
+              margin: const EdgeInsets.only(bottom: 16),
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Text('✨', style: TextStyle(fontSize: 24)),
+                    title: const Text(
+                      'Add Your Vibe (Optional)',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      _vibeTags.isEmpty
+                          ? 'Get +30% profile boost! ${_vibeTags.length} selected'
+                          : '${_vibeTags.length} vibe tags selected',
+                      style: TextStyle(
+                        color: _vibeTags.length >= VibeTags.minRecommendedTags
+                            ? Colors.green
+                            : Colors.orange,
+                      ),
+                    ),
+                    trailing: Icon(
+                      _showVibeTags
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                    ),
+                    onTap: () {
+                      setState(() {
+                        _showVibeTags = !_showVibeTags;
+                      });
+                    },
+                  ),
+                  if (_showVibeTags)
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Pick ${VibeTags.minRecommendedTags}-${VibeTags.maxRecommendedTags} tags that describe your personality and study style',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 16),
+                          ...VibeCategory.values.map((category) {
+                            final tags =
+                                VibeTags.tagsByCategory[category] ?? [];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        category.emoji,
+                                        style: const TextStyle(fontSize: 18),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        category.label,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: tags.map((tag) {
+                                      final isSelected = _vibeTags.contains(
+                                        tag.id,
+                                      );
+                                      return FilterChip(
+                                        label: Text(tag.displayText),
+                                        selected: isSelected,
+                                        onSelected: (selected) {
+                                          setState(() {
+                                            if (selected) {
+                                              _vibeTags.add(tag.id);
+                                            } else {
+                                              _vibeTags.remove(tag.id);
+                                            }
+                                          });
+                                        },
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
             FilledButton(
               onPressed: (!canSave || _saving) ? null : _save,
               child: _saving
