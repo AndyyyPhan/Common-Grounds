@@ -25,13 +25,26 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   late final String _currentUserId;
   int _previousMessageCount = 0;
   final Map<String, int> _messagePositions = {}; // Track message positions for smooth transitions
+  DateTime? _lastMarkedAsReadTime;
+  static const _markAsReadThrottle = Duration(seconds: 2); // Throttle to avoid too many updates
 
   @override
   void initState() {
     super.initState();
     _currentUserId = FirebaseAuth.instance.currentUser!.uid;
     // Mark conversation as read when entering
-    ChatService.instance.markConversationAsRead(
+    _markAsRead();
+  }
+
+  Future<void> _markAsRead() async {
+    final now = DateTime.now();
+    // Throttle updates to avoid too many Firestore writes
+    if (_lastMarkedAsReadTime != null &&
+        now.difference(_lastMarkedAsReadTime!) < _markAsReadThrottle) {
+      return;
+    }
+    _lastMarkedAsReadTime = now;
+    await ChatService.instance.markConversationAsRead(
       widget.conversationId,
       _currentUserId,
     );
@@ -39,6 +52,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
 
   @override
   void dispose() {
+    // Mark as read one final time when leaving to ensure all viewed messages are marked
+    _markAsRead();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -141,6 +156,17 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 final hasNewMessage = messages.length > _previousMessageCount;
                 if (hasNewMessage) {
                   _previousMessageCount = messages.length;
+                  
+                  // Check if any new messages are from the other user
+                  // If so, mark as read since user is actively viewing
+                  if (messages.isNotEmpty) {
+                    final latestMessage = messages.last;
+                    if (latestMessage.senderId != _currentUserId) {
+                      // New message from other user while viewing - mark as read
+                      _markAsRead();
+                    }
+                  }
+                  
                   // Auto-scroll to bottom when new messages arrive
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (_scrollController.hasClients) {

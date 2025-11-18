@@ -116,35 +116,122 @@ class ChatService {
   }
 
   /// Mark all messages in a conversation as read for a user
+  /// Also stores the last viewed timestamp to calculate unread count accurately
+  /// This immediately sets unread count to 0 and updates lastViewed timestamp
+  /// Uses the latest message timestamp from the other user to ensure all visible messages are marked as read
   Future<void> markConversationAsRead(
     String conversationId,
     String userId,
   ) async {
+    // Get the conversation to find the other user
+    final convDoc = await _db.collection('conversations').doc(conversationId).get();
+    if (!convDoc.exists) return;
+    
+    final conv = Conversation.fromMap(convDoc.id, convDoc.data()!);
+    final otherUserId = conv.getOtherParticipantId(userId);
+    
+    // Get the latest message from the other user to use its timestamp
+    // This ensures all messages visible when viewing are marked as read
+    final latestMessageQuery = await _db
+        .collection('messages')
+        .where('conversationId', isEqualTo: conversationId)
+        .where('senderId', isEqualTo: otherUserId)
+        .orderBy('timestamp', descending: true)
+        .limit(1)
+        .get();
+    
+    Timestamp lastViewedTimestamp;
+    if (latestMessageQuery.docs.isNotEmpty) {
+      // Use the latest message's timestamp (or slightly after to account for any edge cases)
+      final latestMessage = latestMessageQuery.docs.first;
+      final latestTimestamp = latestMessage.data()['timestamp'] as Timestamp?;
+      if (latestTimestamp != null) {
+        // Use the latest message timestamp to mark all visible messages as read
+        lastViewedTimestamp = latestTimestamp;
+      } else {
+        // Fallback to server timestamp if message timestamp is not yet resolved
+        lastViewedTimestamp = Timestamp.now();
+      }
+    } else {
+      // No messages from other user yet, use server timestamp
+      lastViewedTimestamp = Timestamp.now();
+    }
+    
+    // Update conversation with unread count = 0 and lastViewed timestamp
+    // Using the latest message timestamp ensures all visible messages are marked as read
     await _db.collection('conversations').doc(conversationId).update({
       'unreadCount.$userId': 0,
+      'lastViewed.$userId': lastViewedTimestamp,
     });
   }
 
   /// Watch all conversations for a user (ordered by last message time)
-  Stream<List<Conversation>> watchUserConversations(String userId) {
-    return _db
+  /// Calculates accurate unread counts by counting messages from other user
+  Stream<List<Conversation>> watchUserConversations(String userId) async* {
+    await for (final snapshot in _db
         .collection('conversations')
         .where('participantIds', arrayContains: userId)
-        .snapshots()
-        .map((snapshot) {
-          final conversations = snapshot.docs
-              .map((doc) => Conversation.fromMap(doc.id, doc.data()))
-              .toList();
+        .snapshots()) {
+      final conversations = <Conversation>[];
 
-          // Sort in-app by lastMessageTime (most recent first)
-          conversations.sort((a, b) {
-            final aTime = a.lastMessageTime ?? a.createdAt;
-            final bTime = b.lastMessageTime ?? b.createdAt;
-            return bTime.compareTo(aTime);
-          });
+      for (final doc in snapshot.docs) {
+        final conv = Conversation.fromMap(doc.id, doc.data());
+        final otherUserId = conv.getOtherParticipantId(userId);
+        
+        // Calculate actual unread count: messages from other user after last viewed
+        final lastViewed = (doc.data()['lastViewed'] as Map<String, dynamic>?)?[userId];
+        DateTime? lastViewedTime;
+        if (lastViewed != null) {
+          if (lastViewed is Timestamp) {
+            lastViewedTime = lastViewed.toDate();
+          }
+        }
 
-          return conversations;
-        });
+        // Count messages from other user that arrived after last viewed
+        int actualUnreadCount = 0;
+        if (lastViewedTime != null) {
+          final unreadMessages = await _db
+              .collection('messages')
+              .where('conversationId', isEqualTo: conv.id)
+              .where('senderId', isEqualTo: otherUserId) // Only messages from OTHER user
+              .where('timestamp', isGreaterThan: Timestamp.fromDate(lastViewedTime))
+              .get();
+          actualUnreadCount = unreadMessages.docs.length;
+        } else {
+          // If never viewed, count all messages from other user
+          final allMessages = await _db
+              .collection('messages')
+              .where('conversationId', isEqualTo: conv.id)
+              .where('senderId', isEqualTo: otherUserId) // Only messages from OTHER user
+              .get();
+          actualUnreadCount = allMessages.docs.length;
+        }
+
+        // Update unread count in conversation object
+        final updatedUnreadCount = Map<String, int>.from(conv.unreadCount);
+        updatedUnreadCount[userId] = actualUnreadCount;
+        
+        conversations.add(Conversation(
+          id: conv.id,
+          participantIds: conv.participantIds,
+          participantProfiles: conv.participantProfiles,
+          lastMessage: conv.lastMessage,
+          lastMessageTime: conv.lastMessageTime,
+          lastMessageSenderId: conv.lastMessageSenderId,
+          unreadCount: updatedUnreadCount,
+          createdAt: conv.createdAt,
+        ));
+      }
+
+      // Sort in-app by lastMessageTime (most recent first)
+      conversations.sort((a, b) {
+        final aTime = a.lastMessageTime ?? a.createdAt;
+        final bTime = b.lastMessageTime ?? b.createdAt;
+        return bTime.compareTo(aTime);
+      });
+
+      yield conversations;
+    }
   }
 
   /// Watch messages in a conversation (ordered by timestamp)
