@@ -53,7 +53,11 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   @override
   void dispose() {
     // Mark as read one final time when leaving to ensure all viewed messages are marked
-    _markAsRead();
+    // Force update even if throttled (bypass throttle check)
+    ChatService.instance.markConversationAsRead(
+      widget.conversationId,
+      _currentUserId,
+    );
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
