@@ -90,6 +90,17 @@ service cloud.firestore {
 
       // Don't allow deleting conversations
       allow delete: if false;
+
+      // _counters subcollection for message sequence numbers
+      match /_counters/{counterId} {
+        // Allow reading if you're a participant in the parent conversation
+        allow read: if isSignedIn() &&
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+
+        // Allow writing if you're a participant in the parent conversation
+        allow write: if isSignedIn() &&
+          request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
+      }
     }
 
     // Messages collection

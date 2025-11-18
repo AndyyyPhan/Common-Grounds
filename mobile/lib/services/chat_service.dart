@@ -55,16 +55,38 @@ class ChatService {
     required String senderId,
     required String text,
   }) async {
-    final message = Message(
-      id: '', // Will be set by Firestore
-      conversationId: conversationId,
-      senderId: senderId,
-      text: text,
-      timestamp: DateTime.now(),
-    );
-
-    // Add message to messages collection
-    await _db.collection('messages').add(message.toMap());
+    // Atomically increment sequence counter for this conversation using a transaction
+    // This ensures messages sent simultaneously get unique, ordered sequence numbers
+    final counterRef = _db
+        .collection('conversations')
+        .doc(conversationId)
+        .collection('_counters')
+        .doc('messages');
+    
+    final nextSequence = await _db.runTransaction<int>((transaction) async {
+      final counterDoc = await transaction.get(counterRef);
+      int sequence;
+      if (counterDoc.exists) {
+        sequence = (counterDoc.data()?['sequence'] as int?) ?? 0;
+        sequence++;
+        transaction.update(counterRef, {'sequence': sequence});
+      } else {
+        sequence = 1;
+        transaction.set(counterRef, {'sequence': sequence});
+      }
+      return sequence;
+    });
+    
+    // Use Firebase server timestamp (Unix time from server, NOT device time)
+    // Add sequence number to ensure correct ordering when timestamps are identical
+    await _db.collection('messages').add({
+      'conversationId': conversationId,
+      'senderId': senderId,
+      'text': text,
+      'timestamp': FieldValue.serverTimestamp(), // Server Unix timestamp, not device time
+      'sequence': nextSequence, // Sequence number for tie-breaking (atomically assigned)
+      'isRead': false,
+    });
 
     // Get conversation to update unread counts
     final convDoc = await _db
@@ -133,9 +155,25 @@ class ChatService {
         .orderBy('timestamp', descending: false)
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => Message.fromMap(doc.id, doc.data()))
-              .toList(),
+          (snapshot) {
+            final messages = snapshot.docs
+                .map((doc) => Message.fromMap(doc.id, doc.data()))
+                .toList();
+            
+            // Client-side sort as safety net to ensure correct ordering
+            // Primary sort: by timestamp (server-assigned Unix time)
+            // Secondary sort: by sequence number to break ties when
+            // messages have identical timestamps (sent in same second/millisecond)
+            messages.sort((a, b) {
+              final timeCompare = a.timestamp.compareTo(b.timestamp);
+              if (timeCompare != 0) return timeCompare;
+              // If timestamps are equal, sort by sequence number
+              // This ensures correct ordering for messages sent in quick succession
+              return a.sequence.compareTo(b.sequence);
+            });
+            
+            return messages;
+          },
         );
   }
 

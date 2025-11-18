@@ -22,7 +22,10 @@ class ChatDetailPage extends StatefulWidget {
 class _ChatDetailPageState extends State<ChatDetailPage> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
+  final _listKey = GlobalKey<AnimatedListState>();
   late final String _currentUserId;
+  final Set<String> _displayedMessageIds = {};
+  List<Message> _currentMessages = [];
 
   @override
   void initState() {
@@ -40,6 +43,42 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _updateMessagesSmoothly(List<Message> newMessages) {
+    // Find new messages that haven't been displayed yet
+    final newMessageIds = newMessages.map((m) => m.id).toSet();
+    final messagesToAdd = newMessages
+        .where((m) => !_displayedMessageIds.contains(m.id))
+        .toList();
+
+    // Update current messages list (re-sorted by timestamp + sequence)
+    _currentMessages = List.from(newMessages);
+
+    // Add new messages with animation
+    for (final message in messagesToAdd) {
+      final index = _currentMessages.indexOf(message);
+      if (index >= 0 && _listKey.currentState != null) {
+        _displayedMessageIds.add(message.id);
+        _listKey.currentState!.insertItem(
+          index,
+          duration: const Duration(milliseconds: 300),
+        );
+      }
+    }
+
+    // Auto-scroll to bottom when new messages are added
+    if (messagesToAdd.isNotEmpty && _scrollController.hasClients) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
   }
 
   void _sendMessage() async {
@@ -103,6 +142,8 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 final messages = snapshot.data ?? [];
 
                 if (messages.isEmpty) {
+                  _displayedMessageIds.clear();
+                  _currentMessages = [];
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -133,25 +174,25 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   );
                 }
 
-                // Auto-scroll to bottom when new messages arrive
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (_scrollController.hasClients) {
-                    _scrollController.animateTo(
-                      _scrollController.position.maxScrollExtent,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOut,
-                    );
-                  }
-                });
+                // Smoothly update messages - only add new ones, let re-sorting happen naturally
+                _updateMessagesSmoothly(messages);
 
-                return ListView.builder(
+                return AnimatedList(
+                  key: _listKey,
                   controller: _scrollController,
                   padding: const EdgeInsets.all(16),
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final message = messages[index];
+                  initialItemCount: _currentMessages.length,
+                  itemBuilder: (context, index, animation) {
+                    if (index >= _currentMessages.length) {
+                      return const SizedBox.shrink();
+                    }
+                    final message = _currentMessages[index];
                     final isMe = message.senderId == _currentUserId;
-                    return _MessageBubble(message: message, isMe: isMe);
+                    return _AnimatedMessageBubble(
+                      message: message,
+                      isMe: isMe,
+                      animation: animation,
+                    );
                   },
                 );
               },
@@ -159,6 +200,35 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
           ),
           _MessageInput(controller: _messageController, onSend: _sendMessage),
         ],
+      ),
+    );
+  }
+}
+
+class _AnimatedMessageBubble extends StatelessWidget {
+  final Message message;
+  final bool isMe;
+  final Animation<double> animation;
+
+  const _AnimatedMessageBubble({
+    required this.message,
+    required this.isMe,
+    required this.animation,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: animation,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.1),
+          end: Offset.zero,
+        ).animate(CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOut,
+        )),
+        child: _MessageBubble(message: message, isMe: isMe),
       ),
     );
   }
@@ -175,6 +245,7 @@ class _MessageBubble extends StatelessWidget {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
+        key: ValueKey(message.id), // Stable key for smooth re-sorting
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         constraints: BoxConstraints(

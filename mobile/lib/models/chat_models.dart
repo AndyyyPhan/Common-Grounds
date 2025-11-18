@@ -7,6 +7,7 @@ class Message {
   final String senderId;
   final String text;
   final DateTime timestamp;
+  final int sequence; // Sequence number for ordering messages with identical timestamps
   final bool isRead;
 
   const Message({
@@ -15,6 +16,7 @@ class Message {
     required this.senderId,
     required this.text,
     required this.timestamp,
+    this.sequence = 0,
     this.isRead = false,
   });
 
@@ -23,17 +25,38 @@ class Message {
     'senderId': senderId,
     'text': text,
     'timestamp': Timestamp.fromDate(timestamp),
+    'sequence': sequence,
     'isRead': isRead,
   };
 
-  factory Message.fromMap(String id, Map<String, dynamic> m) => Message(
-    id: id,
-    conversationId: m['conversationId'] as String,
-    senderId: m['senderId'] as String,
-    text: m['text'] as String,
-    timestamp: (m['timestamp'] as Timestamp).toDate(),
-    isRead: m['isRead'] as bool? ?? false,
-  );
+  factory Message.fromMap(String id, Map<String, dynamic> m) {
+    // Handle server timestamp (may be null if not yet resolved)
+    // IMPORTANT: Server timestamps are assigned by Firebase server, not device
+    DateTime timestamp;
+    final timestampValue = m['timestamp'];
+    if (timestampValue == null) {
+      // Server timestamp not yet resolved - use a very recent past time
+      // This ensures messages appear at the end until timestamp resolves
+      // The client-side sort will handle ordering correctly
+      timestamp = DateTime.now().subtract(const Duration(seconds: 1));
+    } else if (timestampValue is Timestamp) {
+      timestamp = timestampValue.toDate();
+    } else {
+      // Unexpected type - use current time as last resort
+      // Client-side sort will correct any ordering issues
+      timestamp = DateTime.now();
+    }
+
+    return Message(
+      id: id,
+      conversationId: m['conversationId'] as String,
+      senderId: m['senderId'] as String,
+      text: m['text'] as String,
+      timestamp: timestamp,
+      sequence: m['sequence'] as int? ?? 0,
+      isRead: m['isRead'] as bool? ?? false,
+    );
+  }
 }
 
 /// Represents a conversation between two users
