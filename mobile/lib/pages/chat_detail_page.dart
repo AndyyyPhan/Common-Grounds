@@ -22,10 +22,9 @@ class ChatDetailPage extends StatefulWidget {
 class _ChatDetailPageState extends State<ChatDetailPage> {
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
-  final _listKey = GlobalKey<AnimatedListState>();
   late final String _currentUserId;
-  final Set<String> _displayedMessageIds = {};
-  List<Message> _currentMessages = [];
+  int _previousMessageCount = 0;
+  final Map<String, int> _messagePositions = {}; // Track message positions for smooth transitions
 
   @override
   void initState() {
@@ -43,42 +42,6 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _updateMessagesSmoothly(List<Message> newMessages) {
-    // Find new messages that haven't been displayed yet
-    final newMessageIds = newMessages.map((m) => m.id).toSet();
-    final messagesToAdd = newMessages
-        .where((m) => !_displayedMessageIds.contains(m.id))
-        .toList();
-
-    // Update current messages list (re-sorted by timestamp + sequence)
-    _currentMessages = List.from(newMessages);
-
-    // Add new messages with animation
-    for (final message in messagesToAdd) {
-      final index = _currentMessages.indexOf(message);
-      if (index >= 0 && _listKey.currentState != null) {
-        _displayedMessageIds.add(message.id);
-        _listKey.currentState!.insertItem(
-          index,
-          duration: const Duration(milliseconds: 300),
-        );
-      }
-    }
-
-    // Auto-scroll to bottom when new messages are added
-    if (messagesToAdd.isNotEmpty && _scrollController.hasClients) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-    }
   }
 
   void _sendMessage() async {
@@ -142,8 +105,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 final messages = snapshot.data ?? [];
 
                 if (messages.isEmpty) {
-                  _displayedMessageIds.clear();
-                  _currentMessages = [];
+                  _previousMessageCount = 0;
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -174,24 +136,71 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                   );
                 }
 
-                // Smoothly update messages - only add new ones, let re-sorting happen naturally
-                _updateMessagesSmoothly(messages);
+                // Only auto-scroll when a new message is actually added (count increases)
+                // This prevents jumping when messages re-sort due to timestamp resolution
+                final hasNewMessage = messages.length > _previousMessageCount;
+                if (hasNewMessage) {
+                  _previousMessageCount = messages.length;
+                  // Auto-scroll to bottom when new messages arrive
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (_scrollController.hasClients) {
+                      _scrollController.animateTo(
+                        _scrollController.position.maxScrollExtent,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut,
+                      );
+                    }
+                  });
+                } else {
+                  // Update count even if no new message (handles initial load)
+                  _previousMessageCount = messages.length;
+                }
 
-                return AnimatedList(
-                  key: _listKey,
+                // Update message positions and detect changes
+                final Map<String, int> newPositions = {};
+                for (int i = 0; i < messages.length; i++) {
+                  newPositions[messages[i].id] = i;
+                }
+
+                return ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.all(16),
-                  initialItemCount: _currentMessages.length,
-                  itemBuilder: (context, index, animation) {
-                    if (index >= _currentMessages.length) {
-                      return const SizedBox.shrink();
-                    }
-                    final message = _currentMessages[index];
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final message = messages[index];
                     final isMe = message.senderId == _currentUserId;
-                    return _AnimatedMessageBubble(
-                      message: message,
-                      isMe: isMe,
-                      animation: animation,
+                    final previousIndex = _messagePositions[message.id];
+                    final isNewPosition = previousIndex != null && previousIndex != index;
+                    final previousIndexValue = previousIndex ?? index;
+                    
+                    // Update position
+                    _messagePositions[message.id] = index;
+                    
+                    return TweenAnimationBuilder<double>(
+                      key: ValueKey('${message.id}_${message.sequence}'), // Stable key with sequence
+                      tween: Tween<double>(
+                        begin: isNewPosition ? (previousIndexValue < index ? -1.0 : 1.0) : 0.0,
+                        end: 0.0,
+                      ),
+                      duration: isNewPosition 
+                          ? const Duration(milliseconds: 300)
+                          : const Duration(milliseconds: 0),
+                      curve: Curves.easeOut,
+                      builder: (context, offset, child) {
+                        return Transform.translate(
+                          offset: Offset(0, offset * 20), // Subtle slide animation
+                          child: Opacity(
+                            opacity: isNewPosition 
+                                ? (1.0 - (offset.abs() * 0.3).clamp(0.0, 0.3))
+                                : 1.0,
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: _AnimatedMessageBubble(
+                        message: message,
+                        isMe: isMe,
+                      ),
                     );
                   },
                 );
@@ -205,30 +214,62 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   }
 }
 
-class _AnimatedMessageBubble extends StatelessWidget {
+class _AnimatedMessageBubble extends StatefulWidget {
   final Message message;
   final bool isMe;
-  final Animation<double> animation;
 
   const _AnimatedMessageBubble({
     required this.message,
     required this.isMe,
-    required this.animation,
   });
+
+  @override
+  State<_AnimatedMessageBubble> createState() => _AnimatedMessageBubbleState();
+}
+
+class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    ));
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return FadeTransition(
-      opacity: animation,
+      opacity: _fadeAnimation,
       child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.1),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOut,
-        )),
-        child: _MessageBubble(message: message, isMe: isMe),
+        position: _slideAnimation,
+        child: _MessageBubble(
+          message: widget.message,
+          isMe: widget.isMe,
+        ),
       ),
     );
   }

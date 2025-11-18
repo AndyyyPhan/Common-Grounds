@@ -160,16 +160,15 @@ class ChatService {
                 .map((doc) => Message.fromMap(doc.id, doc.data()))
                 .toList();
             
-            // Client-side sort as safety net to ensure correct ordering
-            // Primary sort: by timestamp (server-assigned Unix time)
-            // Secondary sort: by sequence number to break ties when
-            // messages have identical timestamps (sent in same second/millisecond)
+            // Client-side sort: PRIMARY by sequence number (atomically assigned, always correct)
+            // SECONDARY by timestamp (for display purposes only)
+            // This ensures messages appear in correct order immediately, even if timestamps are unresolved
             messages.sort((a, b) {
-              final timeCompare = a.timestamp.compareTo(b.timestamp);
-              if (timeCompare != 0) return timeCompare;
-              // If timestamps are equal, sort by sequence number
-              // This ensures correct ordering for messages sent in quick succession
-              return a.sequence.compareTo(b.sequence);
+              // Primary sort: sequence number (always correct, assigned atomically)
+              final sequenceCompare = a.sequence.compareTo(b.sequence);
+              if (sequenceCompare != 0) return sequenceCompare;
+              // Secondary sort: timestamp (for messages with same sequence - shouldn't happen)
+              return a.timestamp.compareTo(b.timestamp);
             });
             
             return messages;
