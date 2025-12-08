@@ -122,9 +122,8 @@ firebase emulators:start
 ```
 
 ## User Accounts for Testing
-
-### Test Accounts
-*[Test accounts to be added if available]*
+Username: commmonask3@gmail.com
+Password: Commonask3$$$
 
 ### Creating Test Accounts
 1. Launch the app
