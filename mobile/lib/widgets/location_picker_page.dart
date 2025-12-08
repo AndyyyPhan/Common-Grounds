@@ -62,7 +62,9 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
           ),
         );
         if (kDebugMode) {
-          debugPrint('🗺️ Using current GPS location: ${position.latitude}, ${position.longitude}');
+          debugPrint(
+            '🗺️ Using current GPS location: ${position.latitude}, ${position.longitude}',
+          );
         }
         return; // Successfully got GPS location, don't load saved location
       }

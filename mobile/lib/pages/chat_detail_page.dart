@@ -24,9 +24,12 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   final _scrollController = ScrollController();
   late final String _currentUserId;
   int _previousMessageCount = 0;
-  final Map<String, int> _messagePositions = {}; // Track message positions for smooth transitions
+  final Map<String, int> _messagePositions =
+      {}; // Track message positions for smooth transitions
   DateTime? _lastMarkedAsReadTime;
-  static const _markAsReadThrottle = Duration(seconds: 2); // Throttle to avoid too many updates
+  static const _markAsReadThrottle = Duration(
+    seconds: 2,
+  ); // Throttle to avoid too many updates
 
   @override
   void initState() {
@@ -160,7 +163,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                 final hasNewMessage = messages.length > _previousMessageCount;
                 if (hasNewMessage) {
                   _previousMessageCount = messages.length;
-                  
+
                   // Check if any new messages are from the other user
                   // If so, mark as read since user is actively viewing
                   if (messages.isNotEmpty) {
@@ -170,7 +173,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                       _markAsRead();
                     }
                   }
-                  
+
                   // Auto-scroll to bottom when new messages arrive
                   WidgetsBinding.instance.addPostFrameCallback((_) {
                     if (_scrollController.hasClients) {
@@ -200,27 +203,35 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                     final message = messages[index];
                     final isMe = message.senderId == _currentUserId;
                     final previousIndex = _messagePositions[message.id];
-                    final isNewPosition = previousIndex != null && previousIndex != index;
+                    final isNewPosition =
+                        previousIndex != null && previousIndex != index;
                     final previousIndexValue = previousIndex ?? index;
-                    
+
                     // Update position
                     _messagePositions[message.id] = index;
-                    
+
                     return TweenAnimationBuilder<double>(
-                      key: ValueKey('${message.id}_${message.sequence}'), // Stable key with sequence
+                      key: ValueKey(
+                        '${message.id}_${message.sequence}',
+                      ), // Stable key with sequence
                       tween: Tween<double>(
-                        begin: isNewPosition ? (previousIndexValue < index ? -1.0 : 1.0) : 0.0,
+                        begin: isNewPosition
+                            ? (previousIndexValue < index ? -1.0 : 1.0)
+                            : 0.0,
                         end: 0.0,
                       ),
-                      duration: isNewPosition 
+                      duration: isNewPosition
                           ? const Duration(milliseconds: 300)
                           : const Duration(milliseconds: 0),
                       curve: Curves.easeOut,
                       builder: (context, offset, child) {
                         return Transform.translate(
-                          offset: Offset(0, offset * 20), // Subtle slide animation
+                          offset: Offset(
+                            0,
+                            offset * 20,
+                          ), // Subtle slide animation
                           child: Opacity(
-                            opacity: isNewPosition 
+                            opacity: isNewPosition
                                 ? (1.0 - (offset.abs() * 0.3).clamp(0.0, 0.3))
                                 : 1.0,
                             child: child,
@@ -248,10 +259,7 @@ class _AnimatedMessageBubble extends StatefulWidget {
   final Message message;
   final bool isMe;
 
-  const _AnimatedMessageBubble({
-    required this.message,
-    required this.isMe,
-  });
+  const _AnimatedMessageBubble({required this.message, required this.isMe});
 
   @override
   State<_AnimatedMessageBubble> createState() => _AnimatedMessageBubbleState();
@@ -277,10 +285,7 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.2),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
     _controller.forward();
   }
 
@@ -296,10 +301,7 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
       opacity: _fadeAnimation,
       child: SlideTransition(
         position: _slideAnimation,
-        child: _MessageBubble(
-          message: widget.message,
-          isMe: widget.isMe,
-        ),
+        child: _MessageBubble(message: widget.message, isMe: widget.isMe),
       ),
     );
   }

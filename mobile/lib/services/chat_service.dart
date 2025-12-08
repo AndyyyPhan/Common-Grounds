@@ -62,7 +62,7 @@ class ChatService {
         .doc(conversationId)
         .collection('_counters')
         .doc('messages');
-    
+
     final nextSequence = await _db.runTransaction<int>((transaction) async {
       final counterDoc = await transaction.get(counterRef);
       int sequence;
@@ -76,15 +76,17 @@ class ChatService {
       }
       return sequence;
     });
-    
+
     // Use Firebase server timestamp (Unix time from server, NOT device time)
     // Add sequence number to ensure correct ordering when timestamps are identical
     await _db.collection('messages').add({
       'conversationId': conversationId,
       'senderId': senderId,
       'text': text,
-      'timestamp': FieldValue.serverTimestamp(), // Server Unix timestamp, not device time
-      'sequence': nextSequence, // Sequence number for tie-breaking (atomically assigned)
+      'timestamp':
+          FieldValue.serverTimestamp(), // Server Unix timestamp, not device time
+      'sequence':
+          nextSequence, // Sequence number for tie-breaking (atomically assigned)
       'isRead': false,
     });
 
@@ -124,12 +126,15 @@ class ChatService {
     String userId,
   ) async {
     // Get the conversation to find the other user
-    final convDoc = await _db.collection('conversations').doc(conversationId).get();
+    final convDoc = await _db
+        .collection('conversations')
+        .doc(conversationId)
+        .get();
     if (!convDoc.exists) return;
-    
+
     final conv = Conversation.fromMap(convDoc.id, convDoc.data()!);
     final otherUserId = conv.getOtherParticipantId(userId);
-    
+
     // Get the latest message from the other user to use its timestamp
     // This ensures all messages visible when viewing are marked as read
     final latestMessageQuery = await _db
@@ -139,7 +144,7 @@ class ChatService {
         .orderBy('timestamp', descending: true)
         .limit(1)
         .get();
-    
+
     Timestamp lastViewedTimestamp;
     if (latestMessageQuery.docs.isNotEmpty) {
       // Use the latest message's timestamp (or slightly after to account for any edge cases)
@@ -156,7 +161,7 @@ class ChatService {
       // No messages from other user yet, use server timestamp
       lastViewedTimestamp = Timestamp.now();
     }
-    
+
     // Update conversation with unread count = 0 and lastViewed timestamp
     // Using the latest message timestamp ensures all visible messages are marked as read
     await _db.collection('conversations').doc(conversationId).update({
@@ -168,18 +173,20 @@ class ChatService {
   /// Watch all conversations for a user (ordered by last message time)
   /// Calculates accurate unread counts by counting messages from other user
   Stream<List<Conversation>> watchUserConversations(String userId) async* {
-    await for (final snapshot in _db
-        .collection('conversations')
-        .where('participantIds', arrayContains: userId)
-        .snapshots()) {
+    await for (final snapshot
+        in _db
+            .collection('conversations')
+            .where('participantIds', arrayContains: userId)
+            .snapshots()) {
       final conversations = <Conversation>[];
 
       for (final doc in snapshot.docs) {
         final conv = Conversation.fromMap(doc.id, doc.data());
         final otherUserId = conv.getOtherParticipantId(userId);
-        
+
         // Calculate actual unread count: messages from other user after last viewed
-        final lastViewed = (doc.data()['lastViewed'] as Map<String, dynamic>?)?[userId];
+        final lastViewed =
+            (doc.data()['lastViewed'] as Map<String, dynamic>?)?[userId];
         DateTime? lastViewedTime;
         if (lastViewed != null) {
           if (lastViewed is Timestamp) {
@@ -193,8 +200,14 @@ class ChatService {
           final unreadMessages = await _db
               .collection('messages')
               .where('conversationId', isEqualTo: conv.id)
-              .where('senderId', isEqualTo: otherUserId) // Only messages from OTHER user
-              .where('timestamp', isGreaterThan: Timestamp.fromDate(lastViewedTime))
+              .where(
+                'senderId',
+                isEqualTo: otherUserId,
+              ) // Only messages from OTHER user
+              .where(
+                'timestamp',
+                isGreaterThan: Timestamp.fromDate(lastViewedTime),
+              )
               .get();
           actualUnreadCount = unreadMessages.docs.length;
         } else {
@@ -202,7 +215,10 @@ class ChatService {
           final allMessages = await _db
               .collection('messages')
               .where('conversationId', isEqualTo: conv.id)
-              .where('senderId', isEqualTo: otherUserId) // Only messages from OTHER user
+              .where(
+                'senderId',
+                isEqualTo: otherUserId,
+              ) // Only messages from OTHER user
               .get();
           actualUnreadCount = allMessages.docs.length;
         }
@@ -210,17 +226,19 @@ class ChatService {
         // Update unread count in conversation object
         final updatedUnreadCount = Map<String, int>.from(conv.unreadCount);
         updatedUnreadCount[userId] = actualUnreadCount;
-        
-        conversations.add(Conversation(
-          id: conv.id,
-          participantIds: conv.participantIds,
-          participantProfiles: conv.participantProfiles,
-          lastMessage: conv.lastMessage,
-          lastMessageTime: conv.lastMessageTime,
-          lastMessageSenderId: conv.lastMessageSenderId,
-          unreadCount: updatedUnreadCount,
-          createdAt: conv.createdAt,
-        ));
+
+        conversations.add(
+          Conversation(
+            id: conv.id,
+            participantIds: conv.participantIds,
+            participantProfiles: conv.participantProfiles,
+            lastMessage: conv.lastMessage,
+            lastMessageTime: conv.lastMessageTime,
+            lastMessageSenderId: conv.lastMessageSenderId,
+            unreadCount: updatedUnreadCount,
+            createdAt: conv.createdAt,
+          ),
+        );
       }
 
       // Sort in-app by lastMessageTime (most recent first)
@@ -241,26 +259,24 @@ class ChatService {
         .where('conversationId', isEqualTo: conversationId)
         .orderBy('timestamp', descending: false)
         .snapshots()
-        .map(
-          (snapshot) {
-            final messages = snapshot.docs
-                .map((doc) => Message.fromMap(doc.id, doc.data()))
-                .toList();
-            
-            // Client-side sort: PRIMARY by sequence number (atomically assigned, always correct)
-            // SECONDARY by timestamp (for display purposes only)
-            // This ensures messages appear in correct order immediately, even if timestamps are unresolved
-            messages.sort((a, b) {
-              // Primary sort: sequence number (always correct, assigned atomically)
-              final sequenceCompare = a.sequence.compareTo(b.sequence);
-              if (sequenceCompare != 0) return sequenceCompare;
-              // Secondary sort: timestamp (for messages with same sequence - shouldn't happen)
-              return a.timestamp.compareTo(b.timestamp);
-            });
-            
-            return messages;
-          },
-        );
+        .map((snapshot) {
+          final messages = snapshot.docs
+              .map((doc) => Message.fromMap(doc.id, doc.data()))
+              .toList();
+
+          // Client-side sort: PRIMARY by sequence number (atomically assigned, always correct)
+          // SECONDARY by timestamp (for display purposes only)
+          // This ensures messages appear in correct order immediately, even if timestamps are unresolved
+          messages.sort((a, b) {
+            // Primary sort: sequence number (always correct, assigned atomically)
+            final sequenceCompare = a.sequence.compareTo(b.sequence);
+            if (sequenceCompare != 0) return sequenceCompare;
+            // Secondary sort: timestamp (for messages with same sequence - shouldn't happen)
+            return a.timestamp.compareTo(b.timestamp);
+          });
+
+          return messages;
+        });
   }
 
   /// Get a single conversation by ID

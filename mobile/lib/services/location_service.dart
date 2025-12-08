@@ -111,7 +111,8 @@ class LocationService {
       final snap = await _db.collection('users').doc(uid).get();
       final data = snap.data();
       final location = (data?['location'] as Map<String, dynamic>?) ?? {};
-      hasManualLocation = location['latitude'] != null && location['longitude'] != null;
+      hasManualLocation =
+          location['latitude'] != null && location['longitude'] != null;
     } catch (e) {
       debugPrint('⚠️ Error reading saved location: $e');
     }
@@ -143,17 +144,23 @@ class LocationService {
       debugPrint('📍 LocationService: Starting periodic GPS tracking...');
       startTracking();
 
-      debugPrint('📍 LocationService: initForUser completed successfully (GPS mode)');
+      debugPrint(
+        '📍 LocationService: initForUser completed successfully (GPS mode)',
+      );
       return true;
     } else {
       // GPS not available - use manual location as fallback
       if (hasManualLocation) {
-        debugPrint('📍 LocationService: GPS not available - using manual location');
+        debugPrint(
+          '📍 LocationService: GPS not available - using manual location',
+        );
         _manualOverrideActive = true;
         stopTracking();
         return true;
       } else {
-        debugPrint('📍 LocationService: No GPS and no manual location available');
+        debugPrint(
+          '📍 LocationService: No GPS and no manual location available',
+        );
         return false;
       }
     }
@@ -194,7 +201,9 @@ class LocationService {
     if (!gpsAvailable && _manualOverrideActive) {
       // GPS not available and manual override is active - respect manual location
       if (kDebugMode) {
-        debugPrint('🔒 Manual override active and GPS unavailable — skipping auto location update');
+        debugPrint(
+          '🔒 Manual override active and GPS unavailable — skipping auto location update',
+        );
       }
       return;
     }
@@ -203,7 +212,9 @@ class LocationService {
     // This prevents using inaccurate network-based locations (like New York default)
     if (!gpsAvailable && !_useDebugOverride) {
       if (kDebugMode) {
-        debugPrint('⚠️ GPS not available — skipping location update to avoid inaccurate network location');
+        debugPrint(
+          '⚠️ GPS not available — skipping location update to avoid inaccurate network location',
+        );
       }
       return;
     }
@@ -211,9 +222,12 @@ class LocationService {
     // GPS is available - use it (even if manual override was previously set)
     if (gpsAvailable && _manualOverrideActive) {
       if (kDebugMode) {
-        debugPrint('📍 GPS available — overriding manual location with device GPS');
+        debugPrint(
+          '📍 GPS available — overriding manual location with device GPS',
+        );
       }
-      _manualOverrideActive = false; // Clear manual override since GPS is working
+      _manualOverrideActive =
+          false; // Clear manual override since GPS is working
     }
 
     try {
@@ -418,7 +432,7 @@ class LocationService {
 
       // Check if GPS is available - if not, activate manual override
       final gpsAvailable = await _isGpsAvailable();
-      
+
       if (!gpsAvailable) {
         // GPS not available - use manual location as fallback
         _manualOverrideActive = true;
@@ -431,7 +445,9 @@ class LocationService {
         // Don't set manual override, allow GPS to work
         _manualOverrideActive = false;
         if (kDebugMode) {
-          debugPrint('📍 GPS available — manual location saved but GPS will take precedence');
+          debugPrint(
+            '📍 GPS available — manual location saved but GPS will take precedence',
+          );
         }
         // Start tracking with GPS
         startTracking();

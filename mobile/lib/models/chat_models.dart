@@ -7,7 +7,8 @@ class Message {
   final String senderId;
   final String text;
   final DateTime timestamp;
-  final int sequence; // Sequence number for ordering messages with identical timestamps
+  final int
+  sequence; // Sequence number for ordering messages with identical timestamps
   final bool isRead;
 
   const Message({
