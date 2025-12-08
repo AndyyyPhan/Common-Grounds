@@ -37,12 +37,43 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
         : null;
     _selectedAddress = widget.initialAddress;
 
-    // If no initial coordinates were provided, load from user's saved profile
+    // If no initial coordinates were provided, try to get current GPS location first
     if (_selectedLocation == null) {
-      _loadSavedProfileLocation();
+      _loadCurrentGpsLocation();
     }
     // As an absolute fallback, use a neutral default only if nothing loads
     _selectedLocation ??= const LatLng(38.03199384346889, -78.51068317176542);
+  }
+
+  /// Try to get current GPS location first, then fall back to saved profile location
+  Future<void> _loadCurrentGpsLocation() async {
+    try {
+      // First, try to get current GPS location
+      final position = await LocationService.instance.getCurrentCoordinates();
+      if (position != null && mounted) {
+        final latLng = LatLng(position.latitude, position.longitude);
+        setState(() {
+          _selectedLocation = latLng;
+        });
+        // Recenter map if already created
+        _mapController?.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(target: latLng, zoom: 15.0),
+          ),
+        );
+        if (kDebugMode) {
+          debugPrint('🗺️ Using current GPS location: ${position.latitude}, ${position.longitude}');
+        }
+        return; // Successfully got GPS location, don't load saved location
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('🗺️ Could not get GPS location: $e');
+      }
+    }
+
+    // If GPS failed, try loading saved profile location
+    await _loadSavedProfileLocation();
   }
 
   Future<void> _loadSavedProfileLocation() async {
