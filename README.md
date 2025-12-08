@@ -68,7 +68,8 @@ flutter build ios --release
    - Firebase project: `blue4-commongrounds`
 
 5. **Google Maps API Key** (optional but recommended)
-   - See `mobile/GOOGLE_MAPS_SETUP.md` for detailed setup instructions
+   - Add your API key to `mobile/android/app/src/main/AndroidManifest.xml`
+   - See the [Google Maps Flutter documentation](https://pub.dev/packages/google_maps_flutter) for setup instructions
 
 ### Setup Steps
 
@@ -96,8 +97,8 @@ flutter build ios --release
      - iOS: `mobile/ios/Runner/GoogleService-Info.plist` (if available)
 
 5. **Set up Google Maps (Optional)**
-   - Follow the instructions in `mobile/GOOGLE_MAPS_SETUP.md`
    - Add your Google Maps API key to `mobile/android/app/src/main/AndroidManifest.xml`
+   - See the [Google Maps Flutter documentation](https://pub.dev/packages/google_maps_flutter) for detailed setup instructions
 
 6. **Run the app**
    ```bash
@@ -113,7 +114,6 @@ cd mobile/functions
 npm install
 firebase deploy --only functions
 ```
-See `mobile/CLOUD_FUNCTIONS_SETUP.md` for more details.
 
 #### Firebase Emulators (for local development)
 ```bash
@@ -241,14 +241,6 @@ flutter analyze
 cd mobile
 dart format .
 ```
-
-## Documentation
-
-Additional documentation is available in the `mobile/` directory:
-- `GOOGLE_MAPS_SETUP.md` - Google Maps API setup guide
-- `CLOUD_FUNCTIONS_SETUP.md` - Cloud Functions setup and deployment
-- `LOCATION_TESTING_GUIDE.md` - Location feature testing guide
-- `LOCATION_PICKER_DEBUG.md` - Location picker debugging tips
 
 ## License
 
