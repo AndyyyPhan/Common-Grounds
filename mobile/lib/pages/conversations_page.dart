@@ -9,7 +9,11 @@ class ConversationsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    final currentUserId = currentUser.uid;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Messages')),

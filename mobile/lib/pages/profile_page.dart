@@ -17,7 +17,10 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser!;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     return StreamBuilder<UserProfile?>(
       stream: ProfileService.instance.watchProfile(user.uid),
       builder: (context, snap) {
@@ -171,7 +174,7 @@ class ProfilePage extends StatelessWidget {
                 const Divider(),
                 const SizedBox(height: 16),
                 // Debug info for proximity matching
-                _DebugInfo(profile: profile),
+                if (kDebugMode) _DebugInfo(profile: profile),
                 const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 16),
@@ -297,10 +300,10 @@ class _LocationSettingsState extends State<_LocationSettings> {
         // Fallback to GPS coordinates if no saved location
         final hasPermission = await LocationService.instance
             .hasLocationPermission();
-        print('DEBUG: Has location permission: $hasPermission');
+        debugPrint('DEBUG: Has location permission: $hasPermission');
 
         final position = await LocationService.instance.getCurrentCoordinates();
-        print('DEBUG: Got position: $position');
+        debugPrint('DEBUG: Got position: $position');
 
         if (mounted) {
           setState(() {
@@ -317,7 +320,7 @@ class _LocationSettingsState extends State<_LocationSettings> {
         debugPrint('👤 ===== LOAD CURRENT COORDINATES COMPLETED =====');
       }
     } catch (e) {
-      print('DEBUG: Error getting coordinates: $e');
+      debugPrint('DEBUG: Error getting coordinates: $e');
       if (mounted) {
         setState(() => _isLoadingCoordinates = false);
       }

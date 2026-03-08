@@ -128,19 +128,31 @@ class Conversation {
       unreadCount[key.toString()] = (value as num).toInt();
     });
 
+    DateTime createdAt;
+    final createdAtValue = m['createdAt'];
+    if (createdAtValue is Timestamp) {
+      createdAt = createdAtValue.toDate();
+    } else {
+      createdAt = DateTime.now();
+    }
+
+    DateTime? lastMessageTime;
+    final lastMessageTimeValue = m['lastMessageTime'];
+    if (lastMessageTimeValue is Timestamp) {
+      lastMessageTime = lastMessageTimeValue.toDate();
+    }
+
     return Conversation(
       id: id,
-      participantIds: (m['participantIds'] as List).cast<String>(),
+      participantIds: (m['participantIds'] as List?)?.cast<String>() ?? [],
       participantProfiles: Map<String, dynamic>.from(
         m['participantProfiles'] as Map? ?? {},
       ),
       lastMessage: m['lastMessage'] as String?,
-      lastMessageTime: m['lastMessageTime'] != null
-          ? (m['lastMessageTime'] as Timestamp).toDate()
-          : null,
+      lastMessageTime: lastMessageTime,
       lastMessageSenderId: m['lastMessageSenderId'] as String?,
       unreadCount: unreadCount,
-      createdAt: (m['createdAt'] as Timestamp).toDate(),
+      createdAt: createdAt,
     );
   }
 }

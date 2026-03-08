@@ -73,20 +73,36 @@ class WaveRequest {
 
   /// Create from Firestore map
   factory WaveRequest.fromMap(String id, Map<String, dynamic> map) {
+    DateTime timestamp;
+    final timestampValue = map['timestamp'];
+    if (timestampValue is Timestamp) {
+      timestamp = timestampValue.toDate();
+    } else {
+      timestamp = DateTime.now();
+    }
+
+    DateTime? respondedAt;
+    final respondedAtValue = map['respondedAt'];
+    if (respondedAtValue is Timestamp) {
+      respondedAt = respondedAtValue.toDate();
+    }
+
     return WaveRequest(
       id: id,
       senderId: map['senderId'] as String,
       receiverId: map['receiverId'] as String,
-      timestamp: (map['timestamp'] as Timestamp).toDate(),
+      timestamp: timestamp,
       status: WaveStatus.values.firstWhere(
         (e) => e.name == map['status'],
         orElse: () => WaveStatus.pending,
       ),
-      respondedAt: map['respondedAt'] != null
-          ? (map['respondedAt'] as Timestamp).toDate()
-          : null,
-      senderProfile: Map<String, dynamic>.from(map['senderProfile'] as Map),
-      receiverProfile: Map<String, dynamic>.from(map['receiverProfile'] as Map),
+      respondedAt: respondedAt,
+      senderProfile: Map<String, dynamic>.from(
+        map['senderProfile'] as Map? ?? {},
+      ),
+      receiverProfile: Map<String, dynamic>.from(
+        map['receiverProfile'] as Map? ?? {},
+      ),
     );
   }
 
@@ -159,14 +175,26 @@ class MutualMatch {
 
   /// Create from Firestore map
   factory MutualMatch.fromMap(Map<String, dynamic> map) {
+    DateTime matchedAt;
+    final matchedAtValue = map['matchedAt'];
+    if (matchedAtValue is Timestamp) {
+      matchedAt = matchedAtValue.toDate();
+    } else {
+      matchedAt = DateTime.now();
+    }
+
     return MutualMatch(
       user1Id: map['user1Id'] as String,
       user2Id: map['user2Id'] as String,
-      matchedAt: (map['matchedAt'] as Timestamp).toDate(),
+      matchedAt: matchedAt,
       wave1Id: map['wave1Id'] as String,
       wave2Id: map['wave2Id'] as String,
-      user1Profile: Map<String, dynamic>.from(map['user1Profile'] as Map),
-      user2Profile: Map<String, dynamic>.from(map['user2Profile'] as Map),
+      user1Profile: Map<String, dynamic>.from(
+        map['user1Profile'] as Map? ?? {},
+      ),
+      user2Profile: Map<String, dynamic>.from(
+        map['user2Profile'] as Map? ?? {},
+      ),
     );
   }
 }

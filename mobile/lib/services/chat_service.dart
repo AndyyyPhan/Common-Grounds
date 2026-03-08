@@ -15,38 +15,43 @@ class ChatService {
     Map<String, dynamic> currentUserProfile,
     Map<String, dynamic> otherUserProfile,
   ) async {
-    // Check if conversation already exists
-    final existingQuery = await _db
-        .collection('conversations')
-        .where('participantIds', arrayContains: currentUserId)
-        .get();
+    try {
+      // Check if conversation already exists
+      final existingQuery = await _db
+          .collection('conversations')
+          .where('participantIds', arrayContains: currentUserId)
+          .get();
 
-    // Find conversation with both participants
-    for (final doc in existingQuery.docs) {
-      final participantIds = (doc.data()['participantIds'] as List)
-          .cast<String>();
-      if (participantIds.contains(otherUserId)) {
-        return doc.id;
+      // Find conversation with both participants
+      for (final doc in existingQuery.docs) {
+        final participantIds = (doc.data()['participantIds'] as List)
+            .cast<String>();
+        if (participantIds.contains(otherUserId)) {
+          return doc.id;
+        }
       }
+
+      // Create new conversation
+      final conversationRef = _db.collection('conversations').doc();
+      final now = DateTime.now();
+      final conversation = Conversation(
+        id: conversationRef.id,
+        participantIds: [currentUserId, otherUserId],
+        participantProfiles: {
+          currentUserId: currentUserProfile,
+          otherUserId: otherUserProfile,
+        },
+        unreadCount: {currentUserId: 0, otherUserId: 0},
+        createdAt: now,
+        lastMessageTime: now, // Initialize with createdAt so orderBy works
+      );
+
+      await conversationRef.set(conversation.toMap());
+      return conversationRef.id;
+    } catch (e) {
+      debugPrint('Error in getOrCreateConversation: $e');
+      rethrow;
     }
-
-    // Create new conversation
-    final conversationRef = _db.collection('conversations').doc();
-    final now = DateTime.now();
-    final conversation = Conversation(
-      id: conversationRef.id,
-      participantIds: [currentUserId, otherUserId],
-      participantProfiles: {
-        currentUserId: currentUserProfile,
-        otherUserId: otherUserProfile,
-      },
-      unreadCount: {currentUserId: 0, otherUserId: 0},
-      createdAt: now,
-      lastMessageTime: now, // Initialize with createdAt so orderBy works
-    );
-
-    await conversationRef.set(conversation.toMap());
-    return conversationRef.id;
   }
 
   /// Send a message in a conversation
@@ -55,66 +60,71 @@ class ChatService {
     required String senderId,
     required String text,
   }) async {
-    // Atomically increment sequence counter for this conversation using a transaction
-    // This ensures messages sent simultaneously get unique, ordered sequence numbers
-    final counterRef = _db
-        .collection('conversations')
-        .doc(conversationId)
-        .collection('_counters')
-        .doc('messages');
+    try {
+      // Atomically increment sequence counter for this conversation using a transaction
+      // This ensures messages sent simultaneously get unique, ordered sequence numbers
+      final counterRef = _db
+          .collection('conversations')
+          .doc(conversationId)
+          .collection('_counters')
+          .doc('messages');
 
-    final nextSequence = await _db.runTransaction<int>((transaction) async {
-      final counterDoc = await transaction.get(counterRef);
-      int sequence;
-      if (counterDoc.exists) {
-        sequence = (counterDoc.data()?['sequence'] as int?) ?? 0;
-        sequence++;
-        transaction.update(counterRef, {'sequence': sequence});
-      } else {
-        sequence = 1;
-        transaction.set(counterRef, {'sequence': sequence});
+      final nextSequence = await _db.runTransaction<int>((transaction) async {
+        final counterDoc = await transaction.get(counterRef);
+        int sequence;
+        if (counterDoc.exists) {
+          sequence = (counterDoc.data()?['sequence'] as int?) ?? 0;
+          sequence++;
+          transaction.update(counterRef, {'sequence': sequence});
+        } else {
+          sequence = 1;
+          transaction.set(counterRef, {'sequence': sequence});
+        }
+        return sequence;
+      });
+
+      // Use Firebase server timestamp (Unix time from server, NOT device time)
+      // Add sequence number to ensure correct ordering when timestamps are identical
+      await _db.collection('messages').add({
+        'conversationId': conversationId,
+        'senderId': senderId,
+        'text': text,
+        'timestamp':
+            FieldValue.serverTimestamp(), // Server Unix timestamp, not device time
+        'sequence':
+            nextSequence, // Sequence number for tie-breaking (atomically assigned)
+        'isRead': false,
+      });
+
+      // Get conversation to update unread counts
+      final convDoc = await _db
+          .collection('conversations')
+          .doc(conversationId)
+          .get();
+      if (!convDoc.exists) return;
+
+      final conv = Conversation.fromMap(convDoc.id, convDoc.data()!);
+      final newUnreadCount = Map<String, int>.from(conv.unreadCount);
+
+      // Increment unread count for all participants except sender
+      for (final participantId in conv.participantIds) {
+        if (participantId != senderId) {
+          newUnreadCount[participantId] =
+              (newUnreadCount[participantId] ?? 0) + 1;
+        }
       }
-      return sequence;
-    });
 
-    // Use Firebase server timestamp (Unix time from server, NOT device time)
-    // Add sequence number to ensure correct ordering when timestamps are identical
-    await _db.collection('messages').add({
-      'conversationId': conversationId,
-      'senderId': senderId,
-      'text': text,
-      'timestamp':
-          FieldValue.serverTimestamp(), // Server Unix timestamp, not device time
-      'sequence':
-          nextSequence, // Sequence number for tie-breaking (atomically assigned)
-      'isRead': false,
-    });
-
-    // Get conversation to update unread counts
-    final convDoc = await _db
-        .collection('conversations')
-        .doc(conversationId)
-        .get();
-    if (!convDoc.exists) return;
-
-    final conv = Conversation.fromMap(convDoc.id, convDoc.data()!);
-    final newUnreadCount = Map<String, int>.from(conv.unreadCount);
-
-    // Increment unread count for all participants except sender
-    for (final participantId in conv.participantIds) {
-      if (participantId != senderId) {
-        newUnreadCount[participantId] =
-            (newUnreadCount[participantId] ?? 0) + 1;
-      }
+      // Update conversation with last message info
+      await _db.collection('conversations').doc(conversationId).update({
+        'lastMessage': text,
+        'lastMessageTime': FieldValue.serverTimestamp(),
+        'lastMessageSenderId': senderId,
+        'unreadCount': newUnreadCount,
+      });
+    } catch (e) {
+      debugPrint('Error in sendMessage: $e');
+      rethrow;
     }
-
-    // Update conversation with last message info
-    await _db.collection('conversations').doc(conversationId).update({
-      'lastMessage': text,
-      'lastMessageTime': FieldValue.serverTimestamp(),
-      'lastMessageSenderId': senderId,
-      'unreadCount': newUnreadCount,
-    });
   }
 
   /// Mark all messages in a conversation as read for a user

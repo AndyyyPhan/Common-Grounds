@@ -459,14 +459,14 @@ class ProximityService {
           limit: limit,
         )
         .then((matches) {
-          controller.add(matches);
+          if (!controller.isClosed) controller.add(matches);
         })
         .catchError((error) {
-          controller.addError(error);
+          if (!controller.isClosed) controller.addError(error);
         });
 
     // Then update every 2 minutes
-    Timer.periodic(const Duration(minutes: 2), (timer) {
+    final timer = Timer.periodic(const Duration(minutes: 2), (timer) {
       findNearbyMatches(
             currentUserProfile,
             maxDistanceKm: maxDistanceKm,
@@ -474,12 +474,18 @@ class ProximityService {
             limit: limit,
           )
           .then((matches) {
-            controller.add(matches);
+            if (!controller.isClosed) controller.add(matches);
           })
           .catchError((error) {
-            controller.addError(error);
+            if (!controller.isClosed) controller.addError(error);
           });
     });
+
+    // Cancel timer and close controller when the stream listener is removed
+    controller.onCancel = () {
+      timer.cancel();
+      controller.close();
+    };
 
     return controller.stream;
   }

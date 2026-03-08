@@ -24,7 +24,10 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    final u = FirebaseAuth.instance.currentUser!;
+    final u = FirebaseAuth.instance.currentUser;
+    if (u == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     return StreamBuilder<UserProfile?>(
       stream: ProfileService.instance.watchProfile(u.uid),

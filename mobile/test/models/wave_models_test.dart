@@ -161,6 +161,85 @@ void main() {
       expect(wave.senderProfile['displayName'], 'Alice');
       expect(wave.respondedAt, isNotNull);
     });
+
+    test('should handle non-Timestamp timestamp gracefully', () {
+      final map = {
+        'senderId': 'user1',
+        'receiverId': 'user2',
+        'timestamp': 'not-a-timestamp',
+        'status': 'pending',
+        'senderProfile': {'displayName': 'Alice'},
+        'receiverProfile': {'displayName': 'Bob'},
+      };
+
+      final wave = WaveRequest.fromMap('wave123', map);
+
+      // Should not crash, should fallback to DateTime.now()
+      expect(wave.timestamp, isNotNull);
+    });
+
+    test('should handle null respondedAt', () {
+      final map = {
+        'senderId': 'user1',
+        'receiverId': 'user2',
+        'timestamp': Timestamp.fromDate(DateTime(2025, 1, 1, 12, 0)),
+        'status': 'pending',
+        'respondedAt': null,
+        'senderProfile': {},
+        'receiverProfile': {},
+      };
+
+      final wave = WaveRequest.fromMap('wave123', map);
+      expect(wave.respondedAt, isNull);
+    });
+
+    test('should handle missing profile maps gracefully', () {
+      final map = {
+        'senderId': 'user1',
+        'receiverId': 'user2',
+        'timestamp': Timestamp.fromDate(DateTime(2025, 1, 1, 12, 0)),
+        'status': 'pending',
+      };
+
+      final wave = WaveRequest.fromMap('wave123', map);
+
+      expect(wave.senderProfile, isEmpty);
+      expect(wave.receiverProfile, isEmpty);
+    });
+
+    test('should handle unknown status string gracefully', () {
+      final map = {
+        'senderId': 'user1',
+        'receiverId': 'user2',
+        'timestamp': Timestamp.fromDate(DateTime(2025, 1, 1, 12, 0)),
+        'status': 'unknown_status',
+        'senderProfile': {},
+        'receiverProfile': {},
+      };
+
+      final wave = WaveRequest.fromMap('wave123', map);
+
+      // Should default to pending
+      expect(wave.status, WaveStatus.pending);
+    });
+
+    test('copyWith should preserve unmodified fields', () {
+      final original = WaveRequest(
+        id: 'wave123',
+        senderId: 'user1',
+        receiverId: 'user2',
+        timestamp: DateTime(2025, 1, 1, 12, 0),
+        status: WaveStatus.pending,
+        senderProfile: {'displayName': 'Alice'},
+        receiverProfile: {'displayName': 'Bob'},
+      );
+
+      final updated = original.copyWith(status: WaveStatus.accepted);
+
+      expect(updated.id, 'wave123');
+      expect(updated.senderId, 'user1');
+      expect(updated.status, WaveStatus.accepted);
+    });
   });
 
   group('MutualMatch', () {
@@ -248,6 +327,58 @@ void main() {
       expect(match.user2Id, 'user2');
       expect(match.wave1Id, 'wave1');
       expect(match.user1Profile['displayName'], 'Alice');
+    });
+
+    test('should handle non-Timestamp matchedAt gracefully', () {
+      final map = {
+        'user1Id': 'user1',
+        'user2Id': 'user2',
+        'matchedAt': 'not-a-timestamp',
+        'wave1Id': 'wave1',
+        'wave2Id': 'wave2',
+        'user1Profile': {'displayName': 'Alice'},
+        'user2Profile': {'displayName': 'Bob'},
+      };
+
+      final match = MutualMatch.fromMap(map);
+
+      // Should not crash, should fallback to DateTime.now()
+      expect(match.matchedAt, isNotNull);
+    });
+
+    test('should handle missing profile maps gracefully', () {
+      final map = {
+        'user1Id': 'user1',
+        'user2Id': 'user2',
+        'matchedAt': Timestamp.fromDate(DateTime(2025, 1, 1, 12, 0)),
+        'wave1Id': 'wave1',
+        'wave2Id': 'wave2',
+      };
+
+      final match = MutualMatch.fromMap(map);
+
+      expect(match.user1Profile, isEmpty);
+      expect(match.user2Profile, isEmpty);
+    });
+
+    test('toMap and fromMap should round-trip', () {
+      final original = MutualMatch(
+        user1Id: 'user1',
+        user2Id: 'user2',
+        matchedAt: DateTime(2025, 6, 1),
+        wave1Id: 'wave1',
+        wave2Id: 'wave2',
+        user1Profile: {'displayName': 'Alice'},
+        user2Profile: {'displayName': 'Bob'},
+      );
+
+      final map = original.toMap();
+      final restored = MutualMatch.fromMap(map);
+
+      expect(restored.user1Id, original.user1Id);
+      expect(restored.user2Id, original.user2Id);
+      expect(restored.wave1Id, original.wave1Id);
+      expect(restored.wave2Id, original.wave2Id);
     });
   });
 }

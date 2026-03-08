@@ -34,7 +34,16 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   @override
   void initState() {
     super.initState();
-    _currentUserId = FirebaseAuth.instance.currentUser!.uid;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      // User signed out during navigation - pop back
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.of(context).pop();
+      });
+      _currentUserId = '';
+      return;
+    }
+    _currentUserId = user.uid;
     // Mark conversation as read when entering
     _markAsRead();
   }

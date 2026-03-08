@@ -8,6 +8,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_colors.dart';
@@ -388,20 +389,6 @@ class HomePage extends StatelessWidget {
           StreamBuilder<List<ProximityMatch>>(
             stream: ProximityService.instance.watchNearbyMatches(profile),
             builder: (context, proximitySnapshot) {
-              print('🏠 HOME PAGE: StreamBuilder triggered');
-              print(
-                '🏠 HOME PAGE: Connection state: ${proximitySnapshot.connectionState}',
-              );
-              print('🏠 HOME PAGE: Has data: ${proximitySnapshot.hasData}');
-              print('🏠 HOME PAGE: Has error: ${proximitySnapshot.hasError}');
-              if (proximitySnapshot.hasError) {
-                print('🏠 HOME PAGE: Error: ${proximitySnapshot.error}');
-              }
-              if (proximitySnapshot.hasData) {
-                print(
-                  '🏠 HOME PAGE: Matches count: ${proximitySnapshot.data!.length}',
-                );
-              }
               if (proximitySnapshot.connectionState ==
                   ConnectionState.waiting) {
                 return AppCard(
@@ -440,10 +427,6 @@ class HomePage extends StatelessWidget {
                       )
                       .toList();
 
-                  print(
-                    '🏠 HOME PAGE: Filtered ${proximityMatches.length - matches.length} mutual matches',
-                  );
-
                   if (matches.isEmpty) {
                     return AppCard(
                       padding: AppSpacing.lg,
@@ -474,39 +457,27 @@ class HomePage extends StatelessWidget {
                             icon: const Icon(Icons.refresh),
                             label: const Text('Refresh Location'),
                           ),
-                          const SizedBox(height: AppSpacing.sm),
-                          FilledButton.icon(
-                            onPressed: () async {
-                              final messenger = ScaffoldMessenger.of(context);
-                              print(
-                                '🧪 TEST: Manually triggering proximity search',
-                              );
-                              print(
-                                '🧪 TEST: Current profile: ${profile.displayName}',
-                              );
-                              print(
-                                '🧪 TEST: Location visible: ${profile.location?.isVisible}',
-                              );
-                              print(
-                                '🧪 TEST: Location coords: ${profile.location?.latitude}, ${profile.location?.longitude}',
-                              );
-                              print('🧪 TEST: Interests: ${profile.interests}');
-                              final matches = await ProximityService.instance
-                                  .refreshMatches(profile);
-                              print('🧪 TEST: Found ${matches.length} matches');
-                              if (context.mounted) {
-                                messenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Test: Found ${matches.length} matches',
+                          if (kDebugMode) ...[
+                            const SizedBox(height: AppSpacing.sm),
+                            FilledButton.icon(
+                              onPressed: () async {
+                                final messenger = ScaffoldMessenger.of(context);
+                                final matches = await ProximityService.instance
+                                    .refreshMatches(profile);
+                                if (context.mounted) {
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Test: Found ${matches.length} matches',
+                                      ),
                                     ),
-                                  ),
-                                );
-                              }
-                            },
-                            icon: const Icon(Icons.bug_report),
-                            label: const Text('Test Search'),
-                          ),
+                                  );
+                                }
+                              },
+                              icon: const Icon(Icons.bug_report),
+                              label: const Text('Test Search'),
+                            ),
+                          ],
                         ],
                       ),
                     );

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user_profile.dart';
 
 class ProfileService {
@@ -17,7 +18,7 @@ class ProfileService {
       return UserProfile.fromMap(snap.data()!);
     } catch (e) {
       // Log the error for debugging
-      print('Error loading profile for uid $uid: $e');
+      debugPrint('Error loading profile for uid $uid: $e');
       rethrow;
     }
   }
@@ -29,7 +30,7 @@ class ProfileService {
         return UserProfile.fromMap(s.data()!);
       } catch (e) {
         // Log the error for debugging
-        print('Error parsing profile data for uid $uid: $e');
+        debugPrint('Error parsing profile data for uid $uid: $e');
         // Return null to indicate profile couldn't be loaded
         return null;
       }
