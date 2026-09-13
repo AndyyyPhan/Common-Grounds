@@ -101,7 +101,7 @@ class MessagingService {
     );
 
     await _localNotifications.initialize(
-      settings,
+      settings: settings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         debugPrint('📬 Local notification tapped: ${response.payload}');
         // Handle notification tap from local notification
@@ -134,10 +134,10 @@ class MessagingService {
 
     // Show local notification
     await _localNotifications.show(
-      message.hashCode,
-      notification.title,
-      notification.body,
-      const NotificationDetails(
+      id: message.hashCode,
+      title: notification.title,
+      body: notification.body,
+      notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
           'matches',
           'Match Notifications',
