@@ -32,6 +32,11 @@ class AuthService {
   AuthService._();
   static final instance = AuthService._();
 
+  static const _googleIosClientId =
+      '800333772675-skk1odgbh1hlskfq23u9ilj12m2g7r8a.apps.googleusercontent.com';
+  static const _googleWebClientId =
+      '800333772675-fpnvhp5evfrqifff778b5ssvinldunu7.apps.googleusercontent.com';
+
   final _auth = FirebaseAuth.instance;
 
   /// OPTIONAL: call once on app start (e.g., in main after Firebase.initializeApp).
@@ -41,8 +46,8 @@ class AuthService {
   Future<void> initialize({String? clientId, String? serverClientId}) async {
     if (_initialized) return;
     await GoogleSignIn.instance.initialize(
-      clientId: clientId,
-      serverClientId: serverClientId,
+      clientId: clientId ?? _googleIosClientId,
+      serverClientId: serverClientId ?? _googleWebClientId,
     );
     _initialized = true;
   }

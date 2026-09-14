@@ -62,8 +62,9 @@ class _WelcomePageState extends State<WelcomePage>
       await AuthService.instance.signInWithGoogle();
       // authStateChanges() in BootstrapGate will handle navigation
     } catch (e) {
+      debugPrint('Google sign-in failed: $e');
       if (mounted) {
-        setState(() => _error = 'Sign in failed. Please try again.');
+        setState(() => _error = 'Google sign-in failed: $e');
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -79,8 +80,9 @@ class _WelcomePageState extends State<WelcomePage>
       await AuthService.instance.signInWithApple();
       // authStateChanges() in BootstrapGate will handle navigation
     } catch (e) {
+      debugPrint('Apple sign-in failed: $e');
       if (mounted) {
-        setState(() => _error = 'Sign in failed. Please try again.');
+        setState(() => _error = 'Apple sign-in failed: $e');
       }
     } finally {
       if (mounted) setState(() => _loading = false);
