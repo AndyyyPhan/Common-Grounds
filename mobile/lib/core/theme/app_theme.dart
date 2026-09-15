@@ -65,7 +65,7 @@ class AppTheme {
 
       // Card
       cardTheme: CardThemeData(
-        elevation: AppSpacing.elevationSm,
+        elevation: AppSpacing.elevationNone,
         color: AppColors.surfaceLight,
         shape: RoundedRectangleBorder(
           borderRadius: AppSpacing.cardBorderRadius,
@@ -82,7 +82,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: AppSpacing.buttonBorderRadius,
           ),
-          minimumSize: const Size.fromHeight(AppSpacing.buttonHeightMd),
+          minimumSize: const Size(0, AppSpacing.buttonHeightMd),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.sm,
@@ -95,11 +95,11 @@ class AppTheme {
           backgroundColor: AppColors.surfaceLight,
           foregroundColor: AppColors.textPrimaryLight,
           textStyle: AppTypography.button,
-          elevation: AppSpacing.elevationSm,
+          elevation: AppSpacing.elevationNone,
           shape: RoundedRectangleBorder(
             borderRadius: AppSpacing.buttonBorderRadius,
           ),
-          minimumSize: const Size.fromHeight(AppSpacing.buttonHeightMd),
+          minimumSize: const Size(0, AppSpacing.buttonHeightMd),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.sm,
@@ -115,7 +115,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: AppSpacing.buttonBorderRadius,
           ),
-          minimumSize: const Size.fromHeight(AppSpacing.buttonHeightMd),
+          minimumSize: const Size(0, AppSpacing.buttonHeightMd),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.sm,
@@ -188,7 +188,7 @@ class AppTheme {
         selectedLabelStyle: AppTypography.labelSmall,
         unselectedLabelStyle: AppTypography.labelSmall,
         type: BottomNavigationBarType.fixed,
-        elevation: AppSpacing.elevationMd,
+        elevation: AppSpacing.elevationNone,
       ),
 
       // Dialog
@@ -293,7 +293,7 @@ class AppTheme {
 
       // Card
       cardTheme: CardThemeData(
-        elevation: AppSpacing.elevationSm,
+        elevation: AppSpacing.elevationNone,
         color: AppColors.surfaceDark,
         shape: RoundedRectangleBorder(
           borderRadius: AppSpacing.cardBorderRadius,
@@ -310,7 +310,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: AppSpacing.buttonBorderRadius,
           ),
-          minimumSize: const Size.fromHeight(AppSpacing.buttonHeightMd),
+          minimumSize: const Size(0, AppSpacing.buttonHeightMd),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.sm,
@@ -323,11 +323,11 @@ class AppTheme {
           backgroundColor: AppColors.surfaceDark,
           foregroundColor: AppColors.textPrimaryDark,
           textStyle: AppTypography.button,
-          elevation: AppSpacing.elevationSm,
+          elevation: AppSpacing.elevationNone,
           shape: RoundedRectangleBorder(
             borderRadius: AppSpacing.buttonBorderRadius,
           ),
-          minimumSize: const Size.fromHeight(AppSpacing.buttonHeightMd),
+          minimumSize: const Size(0, AppSpacing.buttonHeightMd),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.sm,
@@ -343,7 +343,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: AppSpacing.buttonBorderRadius,
           ),
-          minimumSize: const Size.fromHeight(AppSpacing.buttonHeightMd),
+          minimumSize: const Size(0, AppSpacing.buttonHeightMd),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
             vertical: AppSpacing.sm,
@@ -416,7 +416,7 @@ class AppTheme {
         selectedLabelStyle: AppTypography.labelSmall,
         unselectedLabelStyle: AppTypography.labelSmall,
         type: BottomNavigationBarType.fixed,
-        elevation: AppSpacing.elevationMd,
+        elevation: AppSpacing.elevationNone,
       ),
 
       // Dialog

@@ -1,7 +1,7 @@
 /// Design System - Color Palette
 ///
 /// Defines the color scheme for Common Grounds app with support for light and dark themes.
-/// Based on modern social app design with a fresh, approachable feel.
+/// Based on Common's warm, editorial visual language.
 library;
 
 import 'package:flutter/material.dart';
@@ -14,43 +14,43 @@ class AppColors {
   // PRIMARY COLORS
   // ===========================
 
-  /// Primary brand color - Fresh green representing connection and growth
-  static const Color primary = Color(0xFF00A86B); // Jade green
-  static const Color primaryLight = Color(0xFF4CD694);
-  static const Color primaryDark = Color(0xFF007849);
+  /// Primary brand color - warm terracotta, used deliberately for action.
+  static const Color primary = Color(0xFFB9503A);
+  static const Color primaryLight = Color(0xFFF0C7B8);
+  static const Color primaryDark = Color(0xFF873625);
 
-  /// Secondary accent color - Warm orange for energy and friendliness
-  static const Color secondary = Color(0xFFFF7043);
-  static const Color secondaryLight = Color(0xFFFF9E7B);
-  static const Color secondaryDark = Color(0xFFC63F17);
+  /// Secondary accent color - quiet clay for supporting emphasis.
+  static const Color secondary = Color(0xFF9A6551);
+  static const Color secondaryLight = Color(0xFFE8C9BB);
+  static const Color secondaryDark = Color(0xFF714536);
 
   // ===========================
   // NEUTRAL COLORS
   // ===========================
 
   /// Background colors
-  static const Color backgroundLight = Color(0xFFFAFAFA);
-  static const Color backgroundDark = Color(0xFF121212);
+  static const Color backgroundLight = Color(0xFFFFFAF8);
+  static const Color backgroundDark = Color(0xFF1E1A19);
 
   /// Surface colors (cards, sheets, etc.)
   static const Color surfaceLight = Color(0xFFFFFFFF);
-  static const Color surfaceDark = Color(0xFF1E1E1E);
+  static const Color surfaceDark = Color(0xFF282220);
 
   /// Surface variant (slightly different from surface)
-  static const Color surfaceVariantLight = Color(0xFFF5F5F5);
-  static const Color surfaceVariantDark = Color(0xFF2A2A2A);
+  static const Color surfaceVariantLight = Color(0xFFF5EEEA);
+  static const Color surfaceVariantDark = Color(0xFF342C29);
 
   // ===========================
   // TEXT COLORS
   // ===========================
 
-  static const Color textPrimaryLight = Color(0xFF212121);
-  static const Color textSecondaryLight = Color(0xFF757575);
-  static const Color textDisabledLight = Color(0xFFBDBDBD);
+  static const Color textPrimaryLight = Color(0xFF241E1C);
+  static const Color textSecondaryLight = Color(0xFF756C68);
+  static const Color textDisabledLight = Color(0xFFA79C98);
 
-  static const Color textPrimaryDark = Color(0xFFFFFFFF);
-  static const Color textSecondaryDark = Color(0xFFB0B0B0);
-  static const Color textDisabledDark = Color(0xFF5A5A5A);
+  static const Color textPrimaryDark = Color(0xFFFCF7F4);
+  static const Color textSecondaryDark = Color(0xFFC3B7B2);
+  static const Color textDisabledDark = Color(0xFF786E69);
 
   // ===========================
   // SEMANTIC COLORS
@@ -81,9 +81,9 @@ class AppColors {
   // ===========================
 
   /// Message bubbles
-  static const Color messageSent = Color(0xFF00A86B); // Primary green
-  static const Color messageReceived = Color(0xFFE8E8E8); // Light gray
-  static const Color messageReceivedDark = Color(0xFF2A2A2A); // Dark gray
+  static const Color messageSent = primary;
+  static const Color messageReceived = Color(0xFFF1EAE6);
+  static const Color messageReceivedDark = Color(0xFF342C29);
 
   /// Online/Active status
   static const Color online = Color(0xFF4CAF50);
@@ -93,11 +93,11 @@ class AppColors {
   // DIVIDER & BORDER COLORS
   // ===========================
 
-  static const Color dividerLight = Color(0xFFE0E0E0);
-  static const Color dividerDark = Color(0xFF3A3A3A);
+  static const Color dividerLight = Color(0xFFE8DEDA);
+  static const Color dividerDark = Color(0xFF403632);
 
-  static const Color borderLight = Color(0xFFE0E0E0);
-  static const Color borderDark = Color(0xFF3A3A3A);
+  static const Color borderLight = Color(0xFFE8DEDA);
+  static const Color borderDark = Color(0xFF403632);
 
   // ===========================
   // OVERLAY COLORS

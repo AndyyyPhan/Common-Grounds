@@ -23,20 +23,15 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final card = Card(
+    return Card(
       margin: margin ?? EdgeInsets.all(AppSpacing.cardMargin),
-      child: Padding(padding: EdgeInsets.all(padding), child: child),
-    );
-
-    if (onTap != null) {
-      return InkWell(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
         onTap: onTap,
         borderRadius: AppSpacing.cardBorderRadius,
-        child: card,
-      );
-    }
-
-    return card;
+        child: Padding(padding: EdgeInsets.all(padding), child: child),
+      ),
+    );
   }
 }
 

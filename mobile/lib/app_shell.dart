@@ -75,7 +75,9 @@ class _BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Watch both conversations and waves
+    final badgeColor = Theme.of(context).colorScheme.primary;
+
+    // Watch both conversations and waves.
     return StreamBuilder<List<Conversation>>(
       stream: ChatService.instance.watchUserConversations(userId),
       builder: (context, conversationsSnapshot) {
@@ -100,22 +102,22 @@ class _BottomNav extends StatelessWidget {
               type: BottomNavigationBarType.fixed,
               items: [
                 const BottomNavigationBarItem(
-                  icon: Icon(Icons.home),
-                  label: 'Home',
+                  icon: Icon(Icons.home_outlined),
+                  label: 'Discover',
                 ),
                 BottomNavigationBarItem(
                   icon: pendingWaves > 0
                       ? Stack(
                           clipBehavior: Clip.none,
                           children: [
-                            const Icon(Icons.back_hand),
+                            const Icon(Icons.favorite_border),
                             Positioned(
                               right: -6,
                               top: -4,
                               child: Container(
                                 padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Colors.orange,
+                                decoration: BoxDecoration(
+                                  color: badgeColor,
                                   shape: BoxShape.circle,
                                 ),
                                 constraints: const BoxConstraints(
@@ -137,22 +139,22 @@ class _BottomNav extends StatelessWidget {
                             ),
                           ],
                         )
-                      : const Icon(Icons.back_hand),
-                  label: 'Waves',
+                      : const Icon(Icons.favorite_border),
+                  label: 'Activity',
                 ),
                 BottomNavigationBarItem(
                   icon: totalUnread > 0
                       ? Stack(
                           clipBehavior: Clip.none,
                           children: [
-                            const Icon(Icons.chat),
+                            const Icon(Icons.chat_bubble_outline),
                             Positioned(
                               right: -6,
                               top: -4,
                               child: Container(
                                 padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
+                                decoration: BoxDecoration(
+                                  color: badgeColor,
                                   shape: BoxShape.circle,
                                 ),
                                 constraints: const BoxConstraints(
@@ -174,11 +176,11 @@ class _BottomNav extends StatelessWidget {
                             ),
                           ],
                         )
-                      : const Icon(Icons.chat),
-                  label: 'Messages',
+                      : const Icon(Icons.chat_bubble_outline),
+                  label: 'Inbox',
                 ),
                 const BottomNavigationBarItem(
-                  icon: Icon(Icons.person),
+                  icon: Icon(Icons.person_outline),
                   label: 'Profile',
                 ),
               ],
